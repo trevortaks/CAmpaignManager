@@ -16,9 +16,9 @@
   {
     <div class="col">
       <div class="card h-100">
-        <div class="card-body text-center">
-          <div class="text-muted small">@label</div>
-          <div class="fs-2 fw-semibold">@value</div>
+        <div class="card-body stat-tile">
+          <div class="stat-tile-label">@label</div>
+          <div class="stat-tile-value">@value</div>
         </div>
       </div>
     </div>
@@ -29,13 +29,17 @@
   <div class="col-lg-6">
     <div class="card h-100"><div class="card-body">
       <h2 class="h6 text-muted">Messages sent — last 14 days</h2>
-      <canvas id="sentTrend" height="180" role="img" aria-label="Line chart of messages sent per day"></canvas>
+      <div class="chart-container" style="height:180px">
+        <canvas id="sentTrend" role="img" aria-label="Line chart of messages sent per day"></canvas>
+      </div>
     </div></div>
   </div>
   <div class="col-lg-6">
     <div class="card h-100"><div class="card-body">
       <h2 class="h6 text-muted">Messages failed — last 14 days</h2>
-      <canvas id="failedTrend" height="180" role="img" aria-label="Line chart of messages failed per day"></canvas>
+      <div class="chart-container" style="height:180px">
+        <canvas id="failedTrend" role="img" aria-label="Line chart of messages failed per day"></canvas>
+      </div>
     </div></div>
   </div>
 </div>
@@ -44,13 +48,17 @@
   <div class="col-lg-5">
     <div class="card h-100"><div class="card-body">
       <h2 class="h6 text-muted">By channel — last 30 days</h2>
-      <canvas id="byChannel" height="200" role="img" aria-label="Bar chart of sent and failed by channel"></canvas>
+      <div class="chart-container" style="height:200px">
+        <canvas id="byChannel" role="img" aria-label="Bar chart of sent and failed by channel"></canvas>
+      </div>
     </div></div>
   </div>
   <div class="col-lg-4">
     <div class="card h-100"><div class="card-body">
       <h2 class="h6 text-muted">By provider — last 30 days</h2>
-      <canvas id="byProvider" height="200" role="img" aria-label="Bar chart of messages sent per provider"></canvas>
+      <div class="chart-container" style="height:200px">
+        <canvas id="byProvider" role="img" aria-label="Bar chart of messages sent per provider"></canvas>
+      </div>
     </div></div>
   </div>
   <div class="col-lg-3">
@@ -120,69 +128,121 @@
 @section Scripts {
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script>
-    // Colors from the validated reference palette; single-series charts are titled, so no legend.
-    const surface = '#fcfcfb', blue = '#2a78d6', critical = '#d03b3b',
-          categorical = ['#2a78d6', '#eb6834', '#1baf7a'];
-    const grid = { color: 'rgba(0,0,0,0.07)' };
+    (function () {
+      // Reads the active theme's colors from CSS custom properties at render time, so the
+      // same code draws correctly in both light and dark mode without duplicating palettes.
+      function chartColors() {
+        var cs = getComputedStyle(document.documentElement);
+        var v = function (name) { return cs.getPropertyValue(name).trim(); };
+        return {
+          surface: v('--chart-surface'),
+          grid: v('--chart-grid'),
+          ink: v('--chart-ink-primary'),
+          inkSecondary: v('--chart-ink-secondary'),
+          blue: v('--chart-series-1'),
+          critical: v('--status-critical')
+        };
+      }
 
-    const sentTrend = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.SentTrend.Select(p => new { date = p.Date.ToString("MM-dd"), count = p.Count })));
-    const failedTrend = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.FailedTrend.Select(p => new { date = p.Date.ToString("MM-dd"), count = p.Count })));
-    const byChannel = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.ByChannel.Select(c => new { channel = c.Channel, sent = c.Sent, failed = c.Failed })));
-    const byProvider = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.ByProvider.Select(p => new { provider = p.Provider, sent = p.Sent })));
+      var sentTrend = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+          Model.SentTrend.Select(p => new { date = p.Date.ToString("MM-dd"), count = p.Count })));
+      var failedTrend = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+          Model.FailedTrend.Select(p => new { date = p.Date.ToString("MM-dd"), count = p.Count })));
+      var byChannel = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+          Model.ByChannel.Select(c => new { channel = c.Channel, sent = c.Sent, failed = c.Failed })));
+      var byProvider = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+          Model.ByProvider.Select(p => new { provider = p.Provider, sent = p.Sent })));
 
-    function lineChart(id, points, color) {
-      new Chart(document.getElementById(id), {
-        type: 'line',
-        data: {
-          labels: points.map(p => p.date),
-          datasets: [{ data: points.map(p => p.count), borderColor: color, borderWidth: 2,
-                       pointRadius: 0, pointHitRadius: 12, tension: 0.2, fill: false }]
-        },
-        options: {
-          plugins: { legend: { display: false } },
-          scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid } },
-          maintainAspectRatio: false
-        }
+      // Kept in module scope (not discarded) specifically so themechange can destroy() them
+      // before rebuilding — Chart.js instances are not garbage-collected on their own while a
+      // reference to them (or their attached canvas) is retained, and re-creating a Chart on
+      // a canvas that already has one attached without destroying the old one first is the
+      // classic Chart.js memory-leak pattern.
+      var charts = [];
+
+      function destroyCharts() {
+        charts.forEach(function (c) { c.destroy(); });
+        charts = [];
+      }
+
+      function lineChart(id, points, color, colors) {
+        return new Chart(document.getElementById(id), {
+          type: 'line',
+          data: {
+            labels: points.map(function (p) { return p.date; }),
+            datasets: [{
+              data: points.map(function (p) { return p.count; }),
+              borderColor: color, borderWidth: 2,
+              pointRadius: 0, pointHitRadius: 12, tension: 0.2, fill: false
+            }]
+          },
+          options: {
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: colors.inkSecondary } },
+              y: { beginAtZero: true, grid: { color: colors.grid }, ticks: { color: colors.inkSecondary } }
+            },
+            maintainAspectRatio: false
+          }
+        });
+      }
+
+      function renderCharts() {
+        var colors = chartColors();
+
+        charts.push(lineChart('sentTrend', sentTrend, colors.blue, colors));
+        charts.push(lineChart('failedTrend', failedTrend, colors.critical, colors));
+
+        charts.push(new Chart(document.getElementById('byChannel'), {
+          type: 'bar',
+          data: {
+            labels: byChannel.map(function (c) { return c.channel; }),
+            datasets: [
+              { label: 'Sent', data: byChannel.map(function (c) { return c.sent; }), backgroundColor: colors.blue,
+                borderColor: colors.surface, borderWidth: 2, borderRadius: 4 },
+              { label: 'Failed', data: byChannel.map(function (c) { return c.failed; }), backgroundColor: colors.critical,
+                borderColor: colors.surface, borderWidth: 2, borderRadius: 4 }
+            ]
+          },
+          options: {
+            plugins: { legend: { position: 'bottom', labels: { color: colors.ink } } },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: colors.inkSecondary } },
+              y: { beginAtZero: true, grid: { color: colors.grid }, ticks: { color: colors.inkSecondary } }
+            },
+            maintainAspectRatio: false
+          }
+        }));
+
+        charts.push(new Chart(document.getElementById('byProvider'), {
+          type: 'bar',
+          data: {
+            labels: byProvider.map(function (p) { return p.provider; }),
+            datasets: [{
+              data: byProvider.map(function (p) { return p.sent; }), backgroundColor: colors.blue,
+              borderColor: colors.surface, borderWidth: 2, borderRadius: 4
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { beginAtZero: true, grid: { color: colors.grid }, ticks: { color: colors.inkSecondary } },
+              y: { grid: { display: false }, ticks: { color: colors.inkSecondary } }
+            },
+            maintainAspectRatio: false
+          }
+        }));
+      }
+
+      renderCharts();
+
+      // One listener, registered once — not inside renderCharts() — so toggling the theme
+      // repeatedly never accumulates duplicate listeners or duplicate Chart instances.
+      window.addEventListener('themechange', function () {
+        destroyCharts();
+        renderCharts();
       });
-    }
-    lineChart('sentTrend', sentTrend, blue);
-    lineChart('failedTrend', failedTrend, critical);
-
-    new Chart(document.getElementById('byChannel'), {
-      type: 'bar',
-      data: {
-        labels: byChannel.map(c => c.channel),
-        datasets: [
-          { label: 'Sent', data: byChannel.map(c => c.sent), backgroundColor: blue,
-            borderColor: surface, borderWidth: 2, borderRadius: 4 },
-          { label: 'Failed', data: byChannel.map(c => c.failed), backgroundColor: critical,
-            borderColor: surface, borderWidth: 2, borderRadius: 4 }
-        ]
-      },
-      options: {
-        plugins: { legend: { position: 'bottom' } },
-        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid } },
-        maintainAspectRatio: false
-      }
-    });
-
-    new Chart(document.getElementById('byProvider'), {
-      type: 'bar',
-      data: {
-        labels: byProvider.map(p => p.provider),
-        datasets: [{ data: byProvider.map(p => p.sent), backgroundColor: blue,
-                     borderColor: surface, borderWidth: 2, borderRadius: 4 }]
-      },
-      options: {
-        indexAxis: 'y',
-        plugins: { legend: { display: false } },
-        scales: { x: { beginAtZero: true, grid }, y: { grid: { display: false } } },
-        maintainAspectRatio: false
-      }
-    });
+    })();
   </script>
 }

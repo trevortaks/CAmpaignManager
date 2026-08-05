@@ -1,0 +1,90 @@
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    string ActiveClass(string controller) =>
+        string.Equals(controller, currentController, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+}
+<div class="offcanvas-lg offcanvas-start sidebar" tabindex="-1" id="sidebar" aria-labelledby="sidebarBrandLabel">
+  <div class="sidebar-brand">
+    <a class="sidebar-brand-link" asp-controller="Dashboard" asp-action="Index">
+      <svg class="icon icon-lg" aria-hidden="true"><use href="~/icons/sprite.svg#icon-dashboard"></use></svg>
+      <span id="sidebarBrandLabel">Campaign Manager</span>
+    </a>
+    <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close navigation"></button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Monitor</div>
+      <a class="sidebar-link @ActiveClass("Dashboard")" asp-controller="Dashboard" asp-action="Index">
+        <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-dashboard"></use></svg>
+        Dashboard
+      </a>
+      <a class="sidebar-link @ActiveClass("Campaigns")" asp-controller="Campaigns" asp-action="Index">
+        <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-campaigns"></use></svg>
+        Campaigns
+      </a>
+      <a class="sidebar-link @ActiveClass("CampaignSeries")" asp-controller="CampaignSeries" asp-action="Index">
+        <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-recurring"></use></svg>
+        Recurring
+      </a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Configure</div>
+      <a class="sidebar-link @ActiveClass("Providers")" asp-controller="Providers" asp-action="Index">
+        <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-providers"></use></svg>
+        Providers
+      </a>
+      <a class="sidebar-link @ActiveClass("Templates")" asp-controller="Templates" asp-action="Index">
+        <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-templates"></use></svg>
+        Templates
+      </a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Insights</div>
+      <a class="sidebar-link @ActiveClass("Reports")" asp-controller="Reports" asp-action="Index">
+        <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-reports"></use></svg>
+        Reports
+      </a>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Administration</div>
+      <a class="sidebar-link @ActiveClass("ApiKeys")" asp-controller="ApiKeys" asp-action="Index">
+        <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-api-keys"></use></svg>
+        API Keys
+      </a>
+      <a class="sidebar-link @ActiveClass("Users")" asp-controller="Users" asp-action="Index">
+        <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-users"></use></svg>
+        Users
+      </a>
+      <a class="sidebar-link @ActiveClass("Audit")" asp-controller="Audit" asp-action="Index">
+        <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-audit"></use></svg>
+        Audit
+      </a>
+      <a class="sidebar-link @ActiveClass("Notifications")" asp-controller="Notifications" asp-action="Index">
+        <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-notifications"></use></svg>
+        Notifications
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button type="button" class="theme-toggle" id="themeToggleBtn" aria-label="Toggle dark mode">
+      <svg class="icon icon-sun" aria-hidden="true"><use href="~/icons/sprite.svg#icon-sun"></use></svg>
+      <svg class="icon icon-moon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-moon"></use></svg>
+      <span>Theme</span>
+    </button>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+      <div class="sidebar-footer-user" title="@User.Identity.Name">@User.Identity.Name</div>
+      <form method="post" asp-controller="Account" asp-action="Logout">
+        <button type="submit" class="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-center gap-1">
+          <svg class="icon" aria-hidden="true"><use href="~/icons/sprite.svg#icon-sign-out"></use></svg>
+          Sign out
+        </button>
+      </form>
+    }
+  </div>
+</div>

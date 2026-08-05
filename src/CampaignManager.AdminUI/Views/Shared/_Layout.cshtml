@@ -5,54 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Campaign Manager</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script>
+        // Anti-FOUC: apply the persisted theme before first paint. Must stay a blocking
+        // inline script (not the deferred theme-toggle.js) or a flash of the wrong theme
+        // will show on every hard refresh when the stored preference is dark.
+        (function () {
+            var stored = localStorage.getItem('theme');
+            if (stored === 'dark' || stored === 'light') {
+                document.documentElement.setAttribute('data-theme', stored);
+            }
+        })();
+    </script>
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-controller="Campaigns" asp-action="Index">Campaign Manager</a>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Campaigns" asp-action="Index">Campaigns</a></li>
-                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="CampaignSeries" asp-action="Index">Recurring</a></li>
-                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Reports" asp-action="Index">Reports</a></li>
-                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Providers" asp-action="Index">Providers</a></li>
-                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Templates" asp-action="Index">Templates</a></li>
-                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="ApiKeys" asp-action="Index">API Keys</a></li>
-                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Users" asp-action="Index">Users</a></li>
-                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Audit" asp-action="Index">Audit</a></li>
-                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Notifications" asp-action="Index">Notifications</a></li>
-                    </ul>
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <form method="post" asp-controller="Account" asp-action="Logout" class="d-flex">
-                            <span class="navbar-text me-2">@User.Identity.Name</span>
-                            <button type="submit" class="btn btn-sm btn-outline-secondary">Sign out</button>
-                        </form>
-                    }
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @if (TempData["Message"] is string message)
-            {
-                <div class="alert alert-success alert-dismissible">@message
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-            }
-            @if (TempData["Error"] is string error)
-            {
-                <div class="alert alert-danger alert-dismissible">@error
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-            }
-            @RenderBody()
-        </main>
+    <div class="app-shell">
+        <partial name="_Sidebar" />
+        <div class="app-main">
+            <partial name="_Topbar" />
+            <main class="app-content" role="main">
+                @if (TempData["Message"] is string message)
+                {
+                    <div class="alert alert-success alert-dismissible">@message
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+                }
+                @if (TempData["Error"] is string error)
+                {
+                    <div class="alert alert-danger alert-dismissible">@error
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+                }
+                @RenderBody()
+            </main>
+        </div>
     </div>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/theme-toggle.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

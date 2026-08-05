@@ -1,0 +1,13 @@
+@model CampaignManager.AdminUI.Controllers.ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+}
+<h1 class="h3 mb-3">An error occurred</h1>
+<p class="text-secondary">Something went wrong while processing your request.</p>
+
+@if (Model.ShowRequestId)
+{
+  <p class="text-muted small">Request ID: <code>@Model.RequestId</code></p>
+}
+
+<a class="btn btn-primary" asp-controller="Dashboard" asp-action="Index">Back to dashboard</a>

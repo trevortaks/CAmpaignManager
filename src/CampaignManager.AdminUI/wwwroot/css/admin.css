@@ -1,0 +1,252 @@
+/*
+ * Admin shell components: sidebar, topbar, stat tiles, icons.
+ * The sidebar is a Bootstrap `offcanvas offcanvas-lg offcanvas-start` element (see
+ * _Sidebar.cshtml) — Bootstrap's own responsive offcanvas CSS makes it a fixed-position
+ * drawer below the lg breakpoint (992px) and a normal static element at/above it; this file
+ * only supplies the desktop flex layout and custom visual styling, not the show/hide mechanics.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+.icon {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.icon-lg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* ---------- Shell layout ---------- */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  --bs-offcanvas-width: var(--sidebar-width);
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--surface-1);
+  border-right: 1px solid var(--border-hairline);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--topbar-height);
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border-hairline);
+  flex-shrink: 0;
+}
+
+.sidebar-brand-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.sidebar-brand-link:hover {
+  color: var(--accent);
+}
+
+.sidebar-nav {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-2);
+}
+
+.sidebar-group + .sidebar-group {
+  margin-top: var(--space-3);
+}
+
+.sidebar-group-title {
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: .4375rem var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: .9rem;
+  line-height: 1.3;
+}
+
+.sidebar-link:hover {
+  background-color: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.sidebar-link.active {
+  background-color: var(--surface-2);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.sidebar-link.active .icon {
+  color: var(--accent);
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--border-hairline);
+  padding: var(--space-3) var(--space-3);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sidebar-footer-user {
+  font-size: .8rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  padding: .3rem .6rem;
+  font-size: .8rem;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background-color: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.theme-toggle .icon-moon {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .icon-sun {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .icon-moon {
+  display: inline-block;
+}
+
+.app-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  height: var(--topbar-height);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  background-color: var(--surface-1);
+  border-bottom: 1px solid var(--border-hairline);
+  position: sticky;
+  top: 0;
+  z-index: 1010;
+  flex-shrink: 0;
+}
+
+.topbar-toggle {
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  padding: var(--space-1);
+  line-height: 0;
+}
+
+.topbar-section {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.topbar-spacer {
+  flex: 1 1 auto;
+}
+
+.app-content {
+  flex: 1 1 auto;
+  padding: var(--space-4);
+  max-width: 100%;
+}
+
+/* ---------- Stat tiles ---------- */
+
+.stat-tile {
+  text-align: center;
+  padding: var(--space-2) 0;
+}
+
+.stat-tile-label {
+  color: var(--text-muted);
+  font-size: .8rem;
+}
+
+.stat-tile-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+/* ---------- Charts ---------- */
+
+/*
+ * Chart.js with maintainAspectRatio:false sizes the canvas to fill its parent. Without an
+ * explicit, non-content-driven height on that parent, this creates a runaway feedback loop:
+ * canvas grows to fill parent -> parent grows because its height is driven by its content
+ * (the canvas) -> canvas grows again to fill the now-larger parent -> repeat indefinitely.
+ * .chart-container gives Chart.js a fixed, stable box to measure against instead.
+ */
+.chart-container {
+  position: relative;
+  width: 100%;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ---------- Misc ---------- */
+
+.status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: .35rem;
+  vertical-align: -1px;
+}

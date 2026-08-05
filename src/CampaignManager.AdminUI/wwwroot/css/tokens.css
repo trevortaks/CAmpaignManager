@@ -1,0 +1,124 @@
+/*
+ * Design tokens — custom properties only, no component rules here.
+ * Values are taken verbatim from the dataviz skill's validated reference palette
+ * (references/palette.md), the same source the existing Chart.js views already draw
+ * their colors from. Light = :root; dark = [data-theme="dark"], toggled explicitly by
+ * theme-toggle.js (not prefers-color-scheme) and persisted to localStorage.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces (palette.md "Chart chrome & ink") */
+  --surface-canvas: #f9f9f7; /* page plane */
+  --surface-1: #fcfcfb;      /* cards, sidebar, topbar, chart surface */
+  --surface-2: #f2f1ee;      /* nested surface: table stripe/hover, hairline fill */
+
+  /* Text */
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+
+  /* Borders */
+  --border-hairline: #e1e0d9;
+  --border-strong: #c3c2b7;
+
+  /* Brand / accent (categorical slot 1 — blue) */
+  --accent: #2a78d6;
+  --accent-hover: #1c5cab;
+  --accent-contrast: #ffffff;
+
+  /* Status — fixed, never themed between light/dark per palette.md */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+
+  /* Chart chrome */
+  --chart-surface: #fcfcfb;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-ink-primary: #0b0b0b;
+  --chart-ink-secondary: #52514e;
+  --chart-ink-muted: #898781;
+
+  /* Chart categorical series (slots 1-3 — the only ones validated all-pairs) */
+  --chart-series-1: #2a78d6; /* blue */
+  --chart-series-2: #eb6834; /* orange */
+  --chart-series-3: #1baf7a; /* aqua */
+
+  /* Message-status segment colors (Campaigns/Details doughnut) — light */
+  --status-queued: #9a9992;
+  --status-processing: #2a78d6;
+  --status-sent: #4a3aa7;
+  --status-delivered: #0ca30c;
+  --status-read: #008300;
+  --status-expired: #fab219;
+  --status-rejected: #ec835a;
+  --status-failed: #d03b3b;
+
+  /* Spacing (rem, matches Bootstrap's own spacer scale so utility classes keep working) */
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 3rem;
+
+  /* Radius */
+  --radius-sm: .25rem;
+  --radius-md: .5rem;
+  --radius-lg: .75rem;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(11, 11, 11, .06);
+  --shadow-md: 0 2px 8px rgba(11, 11, 11, .08);
+
+  /* Shell dimensions */
+  --sidebar-width: 15.5rem;
+  --topbar-height: 3.5rem;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-canvas: #0d0d0d;
+  --surface-1: #1a1a19;
+  --surface-2: #232322;
+
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+
+  --border-hairline: #2c2c2a;
+  --border-strong: #383835;
+
+  --accent: #3987e5;
+  --accent-hover: #5598e7;
+  --accent-contrast: #0d0d0d;
+
+  /* Status colors stay identical — palette.md: "fixed, never themed" */
+
+  --chart-surface: #1a1a19;
+  --chart-grid: #2c2c2a;
+  --chart-axis: #383835;
+  --chart-ink-primary: #ffffff;
+  --chart-ink-secondary: #c3c2b7;
+  --chart-ink-muted: #898781;
+
+  --chart-series-1: #3987e5;
+  --chart-series-2: #d95926;
+  --chart-series-3: #199e70;
+
+  /* Message-status segment colors — dark (categorical/status dark columns, same hue family) */
+  --status-queued: #b7b6ae;
+  --status-processing: #3987e5;
+  --status-sent: #9085e9;
+  --status-delivered: #0ca30c;
+  --status-read: #0ca30c;
+  --status-expired: #fab219;
+  --status-rejected: #ec835a;
+  --status-failed: #e66767;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, .5);
+}
