@@ -1,0 +1,64 @@
+@model CampaignManager.Application.Campaigns.Series.SaveCampaignSeriesInput?
+@{
+    ViewData["Title"] = Model is null ? "New recurring campaign" : "Edit recurring campaign";
+    var recipientsRaw = Model is null ? "" : string.Join("\n", Model.Recipients.Select(r => r.Address));
+}
+<h1 class="h3 mb-3">@ViewData["Title"]</h1>
+
+<form method="post" asp-action="Save" class="col-lg-7">
+  @Html.AntiForgeryToken()
+  <input type="hidden" name="id" value="@Model?.Id" />
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Name</label>
+      <input class="form-control" name="name" required value="@Model?.Name" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Channel</label>
+      <select class="form-select" name="channel">
+        @foreach (var channel in new[] { "Sms", "Email", "WhatsApp" })
+        {
+          <option value="@channel" selected="@(channel == Model?.Channel)">@channel</option>
+        }
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Priority</label>
+      <input class="form-control" type="number" name="priority" value="@(Model?.Priority ?? 0)" />
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Sender</label>
+      <input class="form-control" name="sender" required value="@Model?.Sender" />
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Cron expression (UTC, 5 fields)</label>
+      <input class="form-control font-monospace" name="cronExpression" required
+             value="@Model?.CronExpression" placeholder="0 8 * * MON" />
+      <div class="form-text">e.g. <code>0 8 * * *</code> daily 08:00, <code>0 8 * * MON</code> every Monday.</div>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Subject (email only)</label>
+      <input class="form-control" name="subject" value="@Model?.Subject" />
+    </div>
+    <div class="col-12">
+      <label class="form-label">Message body — {{Placeholder}} tokens</label>
+      <textarea class="form-control font-monospace" rows="3" name="messageBody">@Model?.MessageBody</textarea>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Recipients (one per line: address[,Key=Value,...])</label>
+      <textarea class="form-control font-monospace" rows="5" name="recipientsRaw"
+                placeholder="+263771234567,FirstName=Ada">@recipientsRaw</textarea>
+    </div>
+    <div class="col-12">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="isActive" value="true"
+               checked="@(Model?.IsActive ?? true)" id="isActive" />
+        <label class="form-check-label" for="isActive">Active (schedules the recurring job immediately)</label>
+      </div>
+    </div>
+  </div>
+  <div class="mt-3">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+  </div>
+</form>

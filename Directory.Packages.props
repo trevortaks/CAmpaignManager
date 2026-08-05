@@ -19,6 +19,8 @@
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="11.10.0" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
     <!-- Web / auth -->
@@ -28,10 +30,22 @@
     <PackageVersion Include="Microsoft.AspNetCore.DataProtection.Extensions" Version="8.0.11" />
     <!-- Observability -->
     <PackageVersion Include="Serilog.AspNetCore" Version="8.0.3" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.9.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.9.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.15.3-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.1" />
+    <!-- Phase 3: scheduling, caching, resilience, exports, cloud SDKs -->
+    <PackageVersion Include="Cronos" Version="0.8.4" />
+    <PackageVersion Include="StackExchange.Redis" Version="2.8.16" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.11" />
+    <PackageVersion Include="Polly" Version="8.4.2" />
+    <PackageVersion Include="Polly.Extensions" Version="8.4.2" />
+    <PackageVersion Include="ClosedXML" Version="0.104.2" />
+    <PackageVersion Include="QuestPDF" Version="2024.10.3" />
+    <PackageVersion Include="AWSSDK.SimpleEmail" Version="3.7.402.128" />
     <!-- Tests -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageVersion Include="xunit" Version="2.9.2" />

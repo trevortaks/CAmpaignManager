@@ -1,0 +1,55 @@
+@model IReadOnlyList<CampaignManager.Application.Campaigns.Series.CampaignSeriesSummary>
+@{
+    ViewData["Title"] = "Recurring Campaigns";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Recurring Campaigns</h1>
+  <a class="btn btn-primary" asp-action="Edit">New recurring campaign</a>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead>
+      <tr>
+        <th>Name</th><th>Channel</th><th>Cron (UTC)</th><th class="text-end">Recipients</th>
+        <th>Status</th><th>Last run</th><th>Next run</th><th class="text-end">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (var series in Model)
+      {
+        <tr>
+          <td><a asp-action="Edit" asp-route-id="@series.Id">@series.Name</a></td>
+          <td>@series.Channel</td>
+          <td><code>@series.CronExpression</code></td>
+          <td class="text-end">@series.RecipientCount.ToString("N0")</td>
+          <td>
+            @if (series.IsActive)
+            { <span class="badge text-bg-success">Active</span> }
+            else
+            { <span class="badge text-bg-secondary">Paused</span> }
+          </td>
+          <td>@(series.LastRunAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "never")</td>
+          <td>@(series.NextRunAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+          <td class="text-end">
+            <form method="post" asp-action="SetActive" asp-route-id="@series.Id"
+                  asp-route-active="@(!series.IsActive)" class="d-inline">
+              @Html.AntiForgeryToken()
+              <button class="btn btn-sm btn-outline-secondary" type="submit">
+                @(series.IsActive ? "Pause" : "Resume")
+              </button>
+            </form>
+            <form method="post" asp-action="Delete" asp-route-id="@series.Id" class="d-inline">
+              @Html.AntiForgeryToken()
+              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      }
+      @if (Model.Count == 0)
+      {
+        <tr><td colspan="8" class="text-muted">No recurring campaigns yet.</td></tr>
+      }
+    </tbody>
+  </table>
+</div>

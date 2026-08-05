@@ -16,6 +16,10 @@ public interface IAppDbContext
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<WebhookDeadLetter> WebhookDeadLetters { get; }
     DbSet<DailyStatistic> DailyStatistics { get; }
+    DbSet<CampaignSeries> CampaignSeries { get; }
+    DbSet<CampaignSeriesRecipient> CampaignSeriesRecipients { get; }
+    DbSet<NotificationLog> NotificationLogs { get; }
+    DbSet<NotificationSettings> NotificationSettings { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

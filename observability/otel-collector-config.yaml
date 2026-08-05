@@ -1,0 +1,29 @@
+# Optional OTLP collector — receives traces/metrics forwarded via OpenTelemetry:OtlpEndpoint
+# and re-exports them for debugging (logging exporter) or onward to a backend of your choice.
+# Not required for the Prometheus path: the Api/Workers hosts also expose /metrics directly,
+# which Prometheus scrapes without going through this collector.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  debug:
+    verbosity: basic
+
+processors:
+  batch: {}
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

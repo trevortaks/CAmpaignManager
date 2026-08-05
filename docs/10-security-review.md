@@ -28,6 +28,17 @@
 | Credential handling in UI | Provider credentials are write-only in the admin form (stored keys listed by name; values never rendered) |
 | API key lifecycle | Admin UI creation (plaintext shown once), revocation, expiry |
 
+## Added in Phase 3
+
+| Area | Measure |
+|---|---|
+| Additional provider credentials | SendGrid/Mailgun/SES/Africa's Talking/Clickatell/Twilio WhatsApp/Infobip credentials go through the same encrypted-at-rest path as Phase 1 providers (`ProviderConfiguration.EncryptedCredentials`) — no new secret-handling code path introduced |
+| Redis-cached data | Only non-secret provider shape and dashboard aggregates are cached; encrypted credential bytes stay encrypted in cache (never decrypted secrets); short TTLs (10–30s) bound staleness |
+| SSRF (recurring campaigns, providers with configurable `baseUrl`) | Completion callbacks continue through the existing `SsrfGuard`; provider `baseUrl` settings (Infobip) are admin-entered configuration, not user input, so are out of the untrusted-input SSRF threat model |
+| Report exports | Generated from the same tenant-scoped `GetReportQuery` as the AdminUI page — no separate data-access path to audit |
+| Notification content | Notification bodies are built from internal state (campaign/provider names, counts) — no user-supplied free text is interpolated into outbound emails |
+| Dependency vulnerability check | Confirmed clean (`dotnet restore`, no NU1902 warnings) after pinning the OpenTelemetry family to 1.15.3 (patches GHSA-4625-4j76-fww9) and AWSSDK.SimpleEmail to an exact resolved version |
+
 ## Required before production (remaining gap list)
 
 1. **Data Protection key ring**: persist to durable shared storage, encrypt keys at rest

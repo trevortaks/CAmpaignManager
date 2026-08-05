@@ -28,6 +28,8 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
     private readonly ITemplateRenderer _templateRenderer;
     private readonly IBackgroundJobClient _jobClient;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IBulkRecipientWriter _bulkWriter;
+    private readonly Application.Notifications.INotificationService _notifications;
     private readonly ILogger<CampaignProcessingJob> _logger;
 
     public CampaignProcessingJob(
@@ -38,6 +40,8 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
         ITemplateRenderer templateRenderer,
         IBackgroundJobClient jobClient,
         IHttpClientFactory httpClientFactory,
+        IBulkRecipientWriter bulkWriter,
+        Application.Notifications.INotificationService notifications,
         ILogger<CampaignProcessingJob> logger)
     {
         _db = db;
@@ -47,6 +51,8 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
         _templateRenderer = templateRenderer;
         _jobClient = jobClient;
         _httpClientFactory = httpClientFactory;
+        _bulkWriter = bulkWriter;
+        _notifications = notifications;
         _logger = logger;
     }
 
@@ -75,6 +81,23 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
         else if (campaign.Status != CampaignStatus.Processing)
         {
             return;
+        }
+
+        // Lazy message creation: large campaigns (see CreateCampaignHandler.BulkCopyThreshold)
+        // bulk-insert recipients only at creation time and defer Message rows to here, halving
+        // the write volume for the common case where a campaign is dispatched immediately.
+        var hasMessages = await _db.Messages.AnyAsync(m => m.CampaignId == campaignId);
+        if (!hasMessages && campaign.TotalRecipients > 0)
+        {
+            var recipientIds = await _db.CampaignRecipients
+                .Where(r => r.CampaignId == campaignId)
+                .OrderBy(r => r.Id)
+                .Select(r => r.Id)
+                .ToListAsync();
+            await _bulkWriter.BulkInsertMessagesAsync(organizationId, campaignId, campaign.Channel, recipientIds, default);
+            _logger.LogInformation(
+                "Campaign {CampaignId}: lazily bulk-created {Count} Queued messages at dispatch",
+                campaignId, recipientIds.Count);
         }
 
         // Fan out disjoint id ranges; duplicate enqueues are harmless because batch jobs
@@ -156,6 +179,7 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
             message.TransitionTo(MessageStatus.Processing, utcNow);
             message.AttemptCount++;
 
+            var sendStopwatch = System.Diagnostics.Stopwatch.StartNew();
             var (result, providerConfigId) = await _failoverSender.SendAsync(
                 providers,
                 new ProviderSendRequest(
@@ -166,6 +190,10 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
                     campaign.Sender,
                     new Dictionary<string, string>()),
                 CancellationToken.None);
+            sendStopwatch.Stop();
+            var channelTag = new KeyValuePair<string, object?>("channel", campaign.Channel.ToString());
+            Application.Observability.CampaignMetrics.ProviderSendDuration.Record(
+                sendStopwatch.Elapsed.TotalMilliseconds, channelTag);
 
             message.ProviderConfigurationId = providerConfigId;
             utcNow = DateTime.UtcNow;
@@ -173,12 +201,14 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
             {
                 message.ProviderMessageId = result.ProviderMessageId;
                 message.TransitionTo(MessageStatus.Sent, utcNow);
+                Application.Observability.CampaignMetrics.MessagesSent.Add(1, channelTag);
             }
             else
             {
                 message.LastError = Truncate($"{result.ErrorCode}: {result.ErrorMessage}", 1024);
                 message.TransitionTo(
                     result.IsTransient ? MessageStatus.Failed : MessageStatus.Rejected, utcNow);
+                Application.Observability.CampaignMetrics.MessagesFailed.Add(1, channelTag);
             }
 
             _db.DeliveryEvents.Add(new DeliveryEvent
@@ -245,14 +275,51 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
         campaign.CompletedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
+        Application.Observability.CampaignMetrics.CampaignsCompleted.Add(1,
+            new KeyValuePair<string, object?>("status", campaign.Status.ToString()));
+
         if (!string.IsNullOrEmpty(campaign.CallbackUrl))
         {
             _jobClient.Enqueue<ICampaignProcessingJob>(
                 j => j.NotifyCompletionAsync(organizationId, campaignId));
         }
 
+        await RaiseCompletionNotificationAsync(organizationId, campaign, total, failed);
+
         _logger.LogInformation("Finalized campaign {CampaignId} as {Status} (sent {Sent}, failed {Failed})",
             campaignId, campaign.Status, campaign.SentCount, campaign.FailedCount);
+    }
+
+    private async Task RaiseCompletionNotificationAsync(Guid organizationId, Campaign campaign, int total, int failed)
+    {
+        var failureRatio = total == 0 ? 0 : (double)failed / total;
+        var settings = await _db.NotificationSettings
+            .FirstOrDefaultAsync(s => s.OrganizationId == organizationId);
+        var threshold = settings?.HighFailureRateThreshold ?? 0.25;
+
+        if (campaign.Status == CampaignStatus.Failed)
+        {
+            await _notifications.NotifyAsync(organizationId, Application.Notifications.NotificationEventTypes.CampaignFailed,
+                $"Campaign failed: {campaign.Name}",
+                $"Campaign '{campaign.Name}' ({campaign.TrackingId}) failed: all {total} messages were unsuccessful.",
+                default);
+        }
+        else if (failureRatio >= threshold && failed > 0)
+        {
+            await _notifications.NotifyAsync(organizationId, Application.Notifications.NotificationEventTypes.HighFailureRate,
+                $"High failure rate: {campaign.Name}",
+                $"Campaign '{campaign.Name}' ({campaign.TrackingId}) finished with a " +
+                $"{failureRatio:P0} failure rate ({failed}/{total}), at or above the {threshold:P0} threshold.",
+                default);
+        }
+        else if (campaign.Status is CampaignStatus.Completed or CampaignStatus.CompletedWithErrors)
+        {
+            await _notifications.NotifyAsync(organizationId, Application.Notifications.NotificationEventTypes.CampaignCompleted,
+                $"Campaign completed: {campaign.Name}",
+                $"Campaign '{campaign.Name}' ({campaign.TrackingId}) completed: " +
+                $"{total - failed}/{total} sent successfully.",
+                default);
+        }
     }
 
     [AutomaticRetry(Attempts = 5, DelaysInSeconds = [60, 300, 900, 3600, 7200])]

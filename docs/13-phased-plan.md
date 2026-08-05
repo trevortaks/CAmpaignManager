@@ -32,22 +32,53 @@ tests, smoke script, architecture docs.
 - API key management UI (plaintext once, revoke, expiry); user management (create, roles
   Admin/Operator/Viewer, lockout status).
 
-## Phase 3 — Scale & breadth
+## Phase 3 — Scale & breadth ✅ (delivered)
 
-- Recurring campaigns (RRULE-style schedule on campaign + Hangfire recurring jobs).
-- Remaining providers: Africa's Talking, Clickatell, SMPP; SendGrid/Mailgun/SES; Twilio
-  WhatsApp, Infobip.
-- `SqlBulkCopy` imports; lazy message creation; messages/delivery-events partitioning +
-  retention archive.
-- Redis caching (provider configs, dashboards) + per-provider token-bucket rate limiting and
-  circuit breakers.
-- Reports with Excel/CSV/PDF export; notifications (provider offline, auth failure, failure-
-  rate threshold, campaign completed/failed) via email/webhook.
-- OpenTelemetry metrics + OTLP export to a collector; Grafana dashboards.
+- **Recurring campaigns**: `CampaignSeries` template (cron expression via Cronos, own recipient
+  list) + `ISeriesScheduler`/Hangfire recurring job; each occurrence materializes a full
+  `Campaign` through the *same* `CreateCampaignCommand` pipeline used by the API (no duplicated
+  send logic). AdminUI + API CRUD (create/edit/pause/resume/delete).
+- **Remaining providers** — all seven implemented as `IChannelProvider` + `ITestableProvider`:
+  SendGrid, Mailgun, Amazon SES (AWS SDK) for email; Africa's Talking, Clickatell for SMS;
+  Twilio WhatsApp, Infobip for WhatsApp. **SMPP intentionally deferred** — it's a stateful,
+  long-lived TCP session protocol (bind/submit_sm/enquire_link) that doesn't fit the stateless
+  per-message `SendAsync` model without a dedicated session-pool manager; revisit as a Phase 4
+  item alongside broker-based dispatch.
+- **SqlBulkCopy + lazy message creation**: campaigns above `CreateCampaignHandler
+  .BulkCopyThreshold` (2,000 recipients — tuned low for demonstrability) bulk-insert recipients
+  only; `CampaignProcessingJob.DispatchAsync` bulk-creates the Queued `Message` rows lazily on
+  first dispatch, halving the write volume for the common immediate-send path. Verified live
+  with a 2,100-recipient campaign completing correctly via `scripts/smoke.sh`.
+- **Partitioning**: documented and scripted (`scripts/partition-messages.sql`) but *not*
+  auto-applied via EF migrations — rebuilding a live table's clustered index is an operational
+  decision (maintenance window, backup, FK adjustments), not something to run silently on
+  startup. See docs/02-database-schema.md.
+- **Redis**: distributed cache (provider configs ~30s TTL, dashboard tiles ~10s TTL) and a
+  cross-instance provider rate limiter (`RedisProviderThrottle`, Redis `INCR` fixed window);
+  both fall back to a single-process implementation when `ConnectionStrings:Redis` is unset, so
+  Redis stays optional for single-instance deployments. Per-provider **circuit breaker**
+  (Polly, one breaker per `ProviderConfigurationId`) fails fast on a known-down provider instead
+  of retrying into it on every message.
+- **Reports**: CSV/Excel (ClosedXML)/PDF (QuestPDF) exports plus an AdminUI Reports page (date
+  range, totals, top channels/campaigns, daily detail) over `DailyStatistics` — verified
+  producing valid `.xlsx`/`.pdf` files live.
+- **Notifications**: `INotificationService` gates on per-organization `NotificationSettings`
+  (provider offline/auth-failed, campaign completed, campaign failed/high-failure-rate with a
+  configurable threshold), sends via SMTP when configured, and always records a
+  `NotificationLog` row (sent or not) so admins have an audit trail even without a mail relay.
+- **OpenTelemetry metrics**: a custom `CampaignMetrics` meter (messages sent/failed, provider
+  send duration, campaigns created/completed by status, webhooks received) instrumented
+  directly in the send pipeline and webhook controller; exposed via the Prometheus exporter at
+  `GET /metrics` on both Api and Workers. `podman-compose --profile observability up -d` adds
+  an OTLP collector, Prometheus (scraping both hosts) and Grafana with an auto-provisioned
+  datasource and starter dashboard — confirmed end-to-end (metric created → scraped → queryable
+  through Grafana's Prometheus proxy).
 
 ## Phase 4 — Enterprise hardening
 
 - External IdP (OIDC) option; fine-grained permissions.
-- Broker-based dispatch (RabbitMQ/ASB) if Hangfire storage becomes the bottleneck.
+- Broker-based dispatch (RabbitMQ/ASB) if Hangfire storage becomes the bottleneck; SMPP support
+  as part of the same session-oriented rework.
 - Read replicas / reporting store; multi-region strategy; attachment storage (blob/S3).
 - Compliance: PII retention policies, right-to-erasure jobs, per-tenant encryption keys.
+- Apply `scripts/partition-messages.sql` once volume warrants it; wire retention/archive jobs.

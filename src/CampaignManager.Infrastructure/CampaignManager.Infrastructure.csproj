@@ -12,6 +12,14 @@
     <PackageReference Include="Hangfire.Core" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Hangfire.SqlServer" />
+    <PackageReference Include="Cronos" />
+    <PackageReference Include="StackExchange.Redis" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
+    <PackageReference Include="Polly" />
+    <PackageReference Include="Polly.Extensions" />
+    <PackageReference Include="ClosedXML" />
+    <PackageReference Include="QuestPDF" />
+    <PackageReference Include="AWSSDK.SimpleEmail" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CampaignManager.Application\CampaignManager.Application.csproj" />

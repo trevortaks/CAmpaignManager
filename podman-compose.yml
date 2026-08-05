@@ -19,5 +19,60 @@ services:
       retries: 12
       start_period: 20s
 
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: campaignmanager-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # Optional observability stack (Task 26). Start with:
+  #   podman-compose --profile observability up -d
+  otel-collector:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.111.0
+    container_name: campaignmanager-otel-collector
+    profiles: ["observability"]
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
+  prometheus:
+    image: docker.io/prom/prometheus:v2.55.1
+    container_name: campaignmanager-prometheus
+    profiles: ["observability"]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: docker.io/grafana/grafana-oss:11.3.0
+    container_name: campaignmanager-grafana
+    profiles: ["observability"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "admin"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   mssql-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:

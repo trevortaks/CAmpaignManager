@@ -4,6 +4,12 @@
     <PackageReference Include="Hangfire.SqlServer" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CampaignManager.Infrastructure\CampaignManager.Infrastructure.csproj" />

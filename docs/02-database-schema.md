@@ -61,10 +61,17 @@ unique) is the external correlation id. All tenant tables carry `OrganizationId`
 | ApiKeys | `(KeyPrefix)` | auth lookup |
 | AuditLogs | `(OrganizationId, TimestampUtc)` | audit search |
 
-## Scale-out plan (documented, not built)
+## Scale-out plan
 
-- **Partition `Messages` and `DeliveryEvents` by month** (`QueuedAtUtc`/`OccurredAtUtc`)
-  with a sliding-window function/scheme; pair with an archive-and-truncate retention job.
-- Until partitioning: retention via batched deletes by `Id` range (no long locks).
-- Recipient import beyond ~100k/request: switch chunked `AddRange` to `SqlBulkCopy`
-  (EFCore.BulkExtensions) and stream the upload (see 11-scalability).
+- **Recipient bulk copy** ✅ (Phase 3): `SqlBulkRecipientWriter` bulk-inserts recipients above
+  `CreateCampaignHandler.BulkCopyThreshold` (2,000/request) via `SqlBulkCopy`, with `Message`
+  rows created lazily at dispatch instead of at creation time. CSV import is streamed
+  line-by-line rather than buffered. See 11-scalability.md.
+- **Partition `Messages` and `DeliveryEvents` by month** (`QueuedAtUtc`/`OccurredAtUtc`):
+  scripted in `scripts/partition-messages.sql` (partition function/scheme + clustered index
+  rebuild + retention `SWITCH`/`TRUNCATE` pattern), **not** applied via EF migrations —
+  rebuilding a live table's clustered index takes a lock and touches FK relationships
+  (`DeliveryEvents.MessageId` → `Messages.Id`), which is an operational decision (maintenance
+  window, backup, verifying the composite-key FK changes) rather than something to run
+  silently on app startup. Run it manually once volume warrants it.
+- Until partitioning is applied: retention via batched deletes by `Id` range (no long locks).

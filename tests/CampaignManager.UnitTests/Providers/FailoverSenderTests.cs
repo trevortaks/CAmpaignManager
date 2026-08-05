@@ -22,7 +22,17 @@ public class FailoverSenderTests
             Task.CompletedTask;
     }
 
-    private readonly FailoverSender _sender = new(new NoOpThrottle(), NullLogger<FailoverSender>.Instance);
+    /// <summary>Executes the action directly with no breaking, so these tests exercise pure
+    /// failover logic; PollyProviderCircuitBreakerTests cover breaker behavior separately.</summary>
+    private sealed class PassThroughCircuitBreaker : IProviderCircuitBreaker
+    {
+        public Task<SendResult> ExecuteAsync(
+            Guid providerConfigurationId, Func<CancellationToken, Task<SendResult>> action, CancellationToken ct) =>
+            action(ct);
+    }
+
+    private readonly FailoverSender _sender = new(
+        new NoOpThrottle(), new PassThroughCircuitBreaker(), NullLogger<FailoverSender>.Instance);
 
     private static ResolvedProvider Provider(SendResult result, out IChannelProvider mock)
     {

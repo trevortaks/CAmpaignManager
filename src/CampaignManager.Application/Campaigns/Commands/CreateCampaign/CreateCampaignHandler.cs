@@ -15,20 +15,28 @@ public sealed class CreateCampaignHandler : IRequestHandler<CreateCampaignComman
 {
     private const int InsertChunkSize = 1_000;
 
+    /// <summary>Above this recipient count, use SqlBulkCopy for recipients and defer message
+    /// creation to the dispatch job (lazy creation), avoiding a doubled EF write here.
+    /// Tuned low for demonstrability; production deployments may prefer 10,000+.</summary>
+    public const int BulkCopyThreshold = 2_000;
+
     private readonly IAppDbContext _db;
     private readonly ICurrentTenant _tenant;
     private readonly ICampaignDispatcher _dispatcher;
+    private readonly IBulkRecipientWriter _bulkWriter;
     private readonly ILogger<CreateCampaignHandler> _logger;
 
     public CreateCampaignHandler(
         IAppDbContext db,
         ICurrentTenant tenant,
         ICampaignDispatcher dispatcher,
+        IBulkRecipientWriter bulkWriter,
         ILogger<CreateCampaignHandler> logger)
     {
         _db = db;
         _tenant = tenant;
         _dispatcher = dispatcher;
+        _bulkWriter = bulkWriter;
         _logger = logger;
     }
 
@@ -60,6 +68,7 @@ public sealed class CreateCampaignHandler : IRequestHandler<CreateCampaignComman
         {
             Id = Guid.NewGuid(),
             OrganizationId = organizationId,
+            SeriesId = command.SeriesId,
             TrackingId = Campaign.NewTrackingId(),
             Name = request.Name,
             Channel = channel,
@@ -79,32 +88,45 @@ public sealed class CreateCampaignHandler : IRequestHandler<CreateCampaignComman
         _db.Campaigns.Add(campaign);
         await _db.SaveChangesAsync(ct);
 
-        foreach (var chunk in uniqueRecipients.Chunk(InsertChunkSize))
+        if (uniqueRecipients.Count > BulkCopyThreshold)
         {
-            var recipients = chunk.Select(dto => new CampaignRecipient
+            // SqlBulkCopy path: recipients only. Messages are created lazily by the dispatch
+            // job (CampaignProcessingJob.DispatchAsync), halving the write volume here for
+            // very large campaigns — see docs/11-scalability.md.
+            await _bulkWriter.BulkInsertRecipientsAsync(organizationId, campaign.Id, uniqueRecipients, ct);
+            _logger.LogInformation(
+                "Campaign {CampaignId}: bulk-inserted {Count} recipients (over threshold {Threshold}); " +
+                "messages will be created lazily at dispatch", campaign.Id, uniqueRecipients.Count, BulkCopyThreshold);
+        }
+        else
+        {
+            foreach (var chunk in uniqueRecipients.Chunk(InsertChunkSize))
             {
-                CampaignId = campaign.Id,
-                OrganizationId = organizationId,
-                Address = dto.Address.Trim(),
-                PersonalizationJson = dto.Personalization is { Count: > 0 }
-                    ? JsonSerializer.Serialize(dto.Personalization)
-                    : null,
-                CreatedAtUtc = utcNow
-            }).ToList();
-            _db.CampaignRecipients.AddRange(recipients);
-            await _db.SaveChangesAsync(ct);
+                var recipients = chunk.Select(dto => new CampaignRecipient
+                {
+                    CampaignId = campaign.Id,
+                    OrganizationId = organizationId,
+                    Address = dto.Address.Trim(),
+                    PersonalizationJson = dto.Personalization is { Count: > 0 }
+                        ? JsonSerializer.Serialize(dto.Personalization)
+                        : null,
+                    CreatedAtUtc = utcNow
+                }).ToList();
+                _db.CampaignRecipients.AddRange(recipients);
+                await _db.SaveChangesAsync(ct);
 
-            _db.Messages.AddRange(recipients.Select(r => new Message
-            {
-                PublicId = Guid.NewGuid(),
-                OrganizationId = organizationId,
-                CampaignId = campaign.Id,
-                RecipientId = r.Id,
-                Channel = channel,
-                QueuedAtUtc = utcNow,
-                UpdatedAtUtc = utcNow
-            }));
-            await _db.SaveChangesAsync(ct);
+                _db.Messages.AddRange(recipients.Select(r => new Message
+                {
+                    PublicId = Guid.NewGuid(),
+                    OrganizationId = organizationId,
+                    CampaignId = campaign.Id,
+                    RecipientId = r.Id,
+                    Channel = channel,
+                    QueuedAtUtc = utcNow,
+                    UpdatedAtUtc = utcNow
+                }));
+                await _db.SaveChangesAsync(ct);
+            }
         }
 
         if (request.ScheduledAtUtc is { } scheduledAt && scheduledAt > DateTime.UtcNow)
@@ -119,6 +141,9 @@ public sealed class CreateCampaignHandler : IRequestHandler<CreateCampaignComman
         }
 
         await _db.SaveChangesAsync(ct);
+
+        Observability.CampaignMetrics.CampaignsCreated.Add(1,
+            new KeyValuePair<string, object?>("channel", channel.ToString()));
 
         _logger.LogInformation(
             "Created campaign {CampaignId} ({TrackingId}) with {RecipientCount} recipients, status {Status}",

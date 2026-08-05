@@ -89,6 +89,9 @@ public sealed class WebhooksController : ControllerBase
             return Unauthorized();
         }
 
+        CampaignManager.Application.Observability.CampaignMetrics.WebhooksReceived.Add(1,
+            new KeyValuePair<string, object?>("provider", providerKey));
+
         if (!Enum.TryParse<MessageStatus>(payload.Status, ignoreCase: true, out var reportedStatus))
         {
             return BadRequest();

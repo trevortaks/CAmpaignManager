@@ -68,4 +68,37 @@ echo "scheduled: $(echo "$SCHED" | jq -r .status)"
 curl -sf -X POST "$API/api/campaigns/$SCHED_ID/cancel" -H "Authorization: Bearer $TOKEN" -o /dev/null -w "cancel: %{http_code}\n"
 curl -sf "$API/api/campaigns/$SCHED_ID" -H "Authorization: Bearer $TOKEN" | jq -r .status
 
+echo "== 10. Recurring campaign: create, verify next run, pause, delete =="
+SERIES=$(curl -sf -X POST "$API/api/campaign-series" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"Smoke Recurring","channel":"Sms","sender":"SMOKE","messageBody":"Hi {{FirstName}}",
+       "cronExpression":"0 8 * * *","isActive":true,
+       "recipients":[{"address":"+263771000401","personalization":{"FirstName":"Ada"}}]}')
+SERIES_ID=$(echo "$SERIES" | jq -r .seriesId)
+curl -sf "$API/api/campaign-series" -H "Authorization: Bearer $TOKEN" \
+  | jq --arg id "$SERIES_ID" '.[] | select(.id == $id) | {name, isActive, nextRunAtUtc}'
+curl -sf -X POST "$API/api/campaign-series/$SERIES_ID/pause" -H "Authorization: Bearer $TOKEN" \
+  -o /dev/null -w "pause: %{http_code}\n"
+curl -sf -X DELETE "$API/api/campaign-series/$SERIES_ID" -H "Authorization: Bearer $TOKEN" \
+  -o /dev/null -w "delete: %{http_code}\n"
+
+echo "== 11. Bulk-copy path: campaign above BulkCopyThreshold (2,000 recipients) =="
+BULK_RECIPIENTS=$(for i in $(seq 0 2099); do printf '{"address":"+2637800%05d"},' "$((10#$i))"; done | sed 's/,$//')
+BULK_CREATE=$(curl -sf -X POST "$API/api/campaigns" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"name\":\"Bulk Copy Smoke\",\"channel\":\"Sms\",\"sender\":\"SMOKE\",\"messageBody\":\"bulk\",\"recipients\":[$BULK_RECIPIENTS]}")
+BULK_ID=$(echo "$BULK_CREATE" | jq -r .campaignId)
+echo "$BULK_CREATE" | jq '{campaignId, status}'
+for _ in $(seq 1 40); do
+  BULK_STATUS=$(curl -sf "$API/api/campaigns/$BULK_ID" -H "Authorization: Bearer $TOKEN")
+  BULK_STATE=$(echo "$BULK_STATUS" | jq -r .status)
+  case "$BULK_STATE" in Completed|CompletedWithErrors|Failed) break;; esac
+  sleep 3
+done
+echo "$BULK_STATUS" | jq '{status, statistics}'
+[ "$(echo "$BULK_STATUS" | jq -r .statistics.total)" = "2100" ] && echo "bulk-copy total recipients OK (2100)"
+
+echo "== 12. Metrics endpoint exposes custom counters =="
+curl -sf "$API/metrics" | grep -q campaignmanager_campaigns_created && echo "Api /metrics OK"
+
 echo "SMOKE TEST PASSED"

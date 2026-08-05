@@ -9,11 +9,14 @@ namespace CampaignManager.Application.Providers;
 public sealed class FailoverSender
 {
     private readonly IProviderThrottle _throttle;
+    private readonly IProviderCircuitBreaker _circuitBreaker;
     private readonly ILogger<FailoverSender> _logger;
 
-    public FailoverSender(IProviderThrottle throttle, ILogger<FailoverSender> logger)
+    public FailoverSender(
+        IProviderThrottle throttle, IProviderCircuitBreaker circuitBreaker, ILogger<FailoverSender> logger)
     {
         _throttle = throttle;
+        _circuitBreaker = circuitBreaker;
         _logger = logger;
     }
 
@@ -42,7 +45,10 @@ public sealed class FailoverSender
 
                 try
                 {
-                    lastResult = await resolved.Provider.SendAsync(request, resolved.Credentials, ct);
+                    lastResult = await _circuitBreaker.ExecuteAsync(
+                        resolved.ProviderConfigurationId,
+                        token => resolved.Provider.SendAsync(request, resolved.Credentials, token),
+                        ct);
                 }
                 catch (OperationCanceledException)
                 {

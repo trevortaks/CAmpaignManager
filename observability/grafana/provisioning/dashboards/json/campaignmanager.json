@@ -1,0 +1,89 @@
+{
+  "title": "Campaign Manager",
+  "uid": "campaignmanager-overview",
+  "timezone": "utc",
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Messages sent / min",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(campaignmanager_messages_sent_messages_total[5m])) * 60",
+          "legendFormat": "sent/min"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Messages failed / min",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(campaignmanager_messages_failed_messages_total[5m])) * 60",
+          "legendFormat": "failed/min"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Provider send duration (p50 / p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(campaignmanager_provider_send_duration_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(campaignmanager_provider_send_duration_milliseconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Campaigns created / completed (by status)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(campaignmanager_campaigns_created_campaigns_total[15m])) * 60",
+          "legendFormat": "created/min"
+        },
+        {
+          "expr": "sum by (status) (rate(campaignmanager_campaigns_completed_campaigns_total[15m])) * 60",
+          "legendFormat": "completed: {{status}}/min"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Webhooks received / min (by provider)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum by (provider) (rate(campaignmanager_webhooks_received_webhooks_total[5m])) * 60",
+          "legendFormat": "{{provider}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "GC heap size",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "process_runtime_dotnet_gc_objects_size_bytes",
+          "legendFormat": "{{job}}"
+        }
+      ]
+    }
+  ]
+}

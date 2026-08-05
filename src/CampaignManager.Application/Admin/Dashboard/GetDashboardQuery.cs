@@ -1,7 +1,9 @@
+using System.Text.Json;
 using CampaignManager.Application.Abstractions;
 using CampaignManager.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace CampaignManager.Application.Admin.Dashboard;
 
@@ -31,14 +33,39 @@ public sealed record GetDashboardQuery : IRequest<DashboardData>;
 
 public sealed class GetDashboardHandler : IRequestHandler<GetDashboardQuery, DashboardData>
 {
-    private readonly IAppDbContext _db;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(10);
 
-    public GetDashboardHandler(IAppDbContext db)
+    private readonly IAppDbContext _db;
+    private readonly ICurrentTenant _tenant;
+    private readonly IDistributedCache _cache;
+
+    public GetDashboardHandler(IAppDbContext db, ICurrentTenant tenant, IDistributedCache cache)
     {
         _db = db;
+        _tenant = tenant;
+        _cache = cache;
     }
 
+    /// <summary>Dashboard queries scan Messages/DailyStatistics across the whole org; a short
+    /// cache absorbs repeated tile refreshes (e.g. multiple admins with the page open) without
+    /// materially delaying data (10s staleness).</summary>
     public async Task<DashboardData> Handle(GetDashboardQuery query, CancellationToken ct)
+    {
+        var cacheKey = $"dashboard:{_tenant.OrganizationId}";
+        var cached = await _cache.GetStringAsync(cacheKey, ct);
+        if (cached is not null)
+        {
+            var cachedData = JsonSerializer.Deserialize<DashboardData>(cached);
+            if (cachedData is not null) return cachedData;
+        }
+
+        var data = await BuildAsync(ct);
+        await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(data),
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = CacheTtl }, ct);
+        return data;
+    }
+
+    private async Task<DashboardData> BuildAsync(CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var todayStart = today.ToDateTime(TimeOnly.MinValue);

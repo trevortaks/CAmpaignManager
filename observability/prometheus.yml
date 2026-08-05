@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: campaignmanager-api
+    static_configs:
+      - targets: ["host.containers.internal:5080"]
+    metrics_path: /metrics
+
+  - job_name: campaignmanager-workers
+    static_configs:
+      - targets: ["host.containers.internal:5090"]
+    metrics_path: /metrics

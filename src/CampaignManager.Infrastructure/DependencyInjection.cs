@@ -33,6 +33,7 @@ public static class DependencyInjection
                     sql => sql.EnableRetryOnFailure(3))
                 .AddInterceptors(sp.GetRequiredService<Persistence.Interceptors.AuditSaveChangesInterceptor>()));
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        services.AddScoped<IBulkRecipientWriter, SqlBulkRecipientWriter>();
 
         services.AddScoped<CurrentTenant>();
         services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<CurrentTenant>());
@@ -70,9 +71,38 @@ public static class DependencyInjection
         services.AddSingleton<IChannelProvider, TwilioSmsProvider>();
         services.AddSingleton<IChannelProvider, SmtpEmailProvider>();
         services.AddSingleton<IChannelProvider, MetaWhatsAppProvider>();
+        services.AddSingleton<IChannelProvider, Providers.SendGrid.SendGridEmailProvider>();
+        services.AddSingleton<IChannelProvider, Providers.Mailgun.MailgunEmailProvider>();
+        services.AddSingleton<IChannelProvider, Providers.Ses.SesEmailProvider>();
+        services.AddSingleton<IChannelProvider, Providers.AfricasTalking.AfricasTalkingSmsProvider>();
+        services.AddSingleton<IChannelProvider, Providers.Clickatell.ClickatellSmsProvider>();
+        services.AddSingleton<IChannelProvider, Providers.Twilio.TwilioWhatsAppProvider>();
+        services.AddSingleton<IChannelProvider, Providers.Infobip.InfobipWhatsAppProvider>();
         services.AddSingleton<IProviderRegistry, ProviderRegistry>();
         services.AddScoped<IProviderSelector, ProviderSelector>();
-        services.AddSingleton<IProviderThrottle, Providers.ProviderThrottle>();
+
+        // Redis backs the distributed cache (provider config + dashboard) and the multi-instance
+        // rate limiter when configured; otherwise both fall back to a single-process
+        // implementation, so the app runs unmodified without Redis (e.g. plain local dev).
+        var redisConnectionString = configuration.GetConnectionString("Redis");
+        if (!string.IsNullOrWhiteSpace(redisConnectionString))
+        {
+            // AbortOnConnectFail=false: don't crash app startup if Redis is briefly unavailable;
+            // the multiplexer retries in the background and commands resume once it's up.
+            var redisOptions = StackExchange.Redis.ConfigurationOptions.Parse(redisConnectionString);
+            redisOptions.AbortOnConnectFail = false;
+            var multiplexer = StackExchange.Redis.ConnectionMultiplexer.Connect(redisOptions);
+            services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(multiplexer);
+            services.AddStackExchangeRedisCache(options => options.Configuration = redisConnectionString);
+            services.AddSingleton<IProviderThrottle, Providers.RedisProviderThrottle>();
+        }
+        else
+        {
+            services.AddDistributedMemoryCache();
+            services.AddSingleton<IProviderThrottle, Providers.ProviderThrottle>();
+        }
+
+        services.AddSingleton<IProviderCircuitBreaker, Providers.PollyProviderCircuitBreaker>();
         services.AddSingleton<FailoverSender>();
         services.AddSingleton<Security.IWebhookSignatureVerifier, Security.MetaWebhookSignatureVerifier>();
         services.AddSingleton<Security.IWebhookSignatureVerifier, Security.TwilioWebhookSignatureVerifier>();
@@ -81,6 +111,11 @@ public static class DependencyInjection
         services.AddScoped<ICampaignDispatcher, HangfireCampaignDispatcher>();
         services.AddScoped<ICampaignProcessingJob, CampaignProcessingJob>();
         services.AddScoped<IMaintenanceJobs, MaintenanceJobs>();
+        services.AddScoped<ISeriesScheduler, HangfireSeriesScheduler>();
+        services.AddScoped<ICampaignSeriesJob, CampaignSeriesJob>();
+        services.AddScoped<Application.Notifications.INotificationService, Application.Notifications.NotificationService>();
+        services.AddScoped<Application.Notifications.INotificationSink, Notifications.SmtpNotificationSink>();
+        services.AddSingleton<Reporting.IReportExporter, Reporting.ReportExporter>();
 
         return services;
     }

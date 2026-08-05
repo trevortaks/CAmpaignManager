@@ -25,7 +25,13 @@
     <div class="col-md-3">
       <label class="form-label">Provider key</label>
       <select class="form-select" name="providerKey">
-        @foreach (var key in new[] { "fake-sms", "fake-email", "fake-whatsapp", "twilio", "smtp", "meta-whatsapp" })
+        @foreach (var key in new[]
+        {
+            "fake-sms", "fake-email", "fake-whatsapp",
+            "twilio", "africas-talking", "clickatell",
+            "smtp", "sendgrid", "mailgun", "ses",
+            "meta-whatsapp", "twilio-whatsapp", "infobip"
+        })
         {
           <option value="@key" selected="@(key == Model?.ProviderKey)">@key</option>
         }

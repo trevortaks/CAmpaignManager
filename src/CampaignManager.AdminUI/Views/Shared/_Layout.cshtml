@@ -16,11 +16,14 @@
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item"><a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link text-dark" asp-controller="Campaigns" asp-action="Index">Campaigns</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="CampaignSeries" asp-action="Index">Recurring</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Reports" asp-action="Index">Reports</a></li>
                         <li class="nav-item"><a class="nav-link text-dark" asp-controller="Providers" asp-action="Index">Providers</a></li>
                         <li class="nav-item"><a class="nav-link text-dark" asp-controller="Templates" asp-action="Index">Templates</a></li>
                         <li class="nav-item"><a class="nav-link text-dark" asp-controller="ApiKeys" asp-action="Index">API Keys</a></li>
                         <li class="nav-item"><a class="nav-link text-dark" asp-controller="Users" asp-action="Index">Users</a></li>
                         <li class="nav-item"><a class="nav-link text-dark" asp-controller="Audit" asp-action="Index">Audit</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark" asp-controller="Notifications" asp-action="Index">Notifications</a></li>
                     </ul>
                     @if (User.Identity?.IsAuthenticated == true)
                     {

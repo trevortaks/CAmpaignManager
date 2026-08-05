@@ -181,6 +181,9 @@ namespace CampaignManager.Infrastructure.Migrations
                     b.Property<int>("SentCount")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("StartedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -206,6 +209,8 @@ namespace CampaignManager.Infrastructure.Migrations
                         .HasColumnType("nvarchar(32)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SeriesId");
 
                     b.HasIndex("TemplateId");
 
@@ -248,6 +253,105 @@ namespace CampaignManager.Infrastructure.Migrations
                     b.HasIndex("CampaignId", "Id");
 
                     b.ToTable("CampaignRecipients");
+                });
+
+            modelBuilder.Entity("CampaignManager.Domain.Entities.CampaignSeries", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CallbackUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<byte>("Channel")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CronExpression")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastRunAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MessageBody")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("NextRunAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RecurringJobId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Sender")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("TemplateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "IsActive");
+
+                    b.ToTable("CampaignSeries");
+                });
+
+            modelBuilder.Entity("CampaignManager.Domain.Entities.CampaignSeriesRecipient", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PersonalizationJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SeriesId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeriesId");
+
+                    b.ToTable("CampaignSeriesRecipients");
                 });
 
             modelBuilder.Entity("CampaignManager.Domain.Entities.DailyStatistic", b =>
@@ -445,6 +549,74 @@ namespace CampaignManager.Infrastructure.Migrations
                     b.HasIndex("OrganizationId", "Name");
 
                     b.ToTable("MessageTemplates");
+                });
+
+            modelBuilder.Entity("CampaignManager.Domain.Entities.NotificationLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Sent")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "CreatedAtUtc");
+
+                    b.ToTable("NotificationLogs");
+                });
+
+            modelBuilder.Entity("CampaignManager.Domain.Entities.NotificationSettings", b =>
+                {
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("HighFailureRateThreshold")
+                        .HasColumnType("float");
+
+                    b.Property<bool>("NotifyCampaignCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("NotifyCampaignFailed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("NotifyProviderOffline")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RecipientEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)");
+
+                    b.HasKey("OrganizationId");
+
+                    b.ToTable("NotificationSettings");
                 });
 
             modelBuilder.Entity("CampaignManager.Domain.Entities.Organization", b =>
@@ -836,6 +1008,28 @@ namespace CampaignManager.Infrastructure.Migrations
                     b.Navigation("Campaign");
                 });
 
+            modelBuilder.Entity("CampaignManager.Domain.Entities.CampaignSeries", b =>
+                {
+                    b.HasOne("CampaignManager.Domain.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("CampaignManager.Domain.Entities.CampaignSeriesRecipient", b =>
+                {
+                    b.HasOne("CampaignManager.Domain.Entities.CampaignSeries", "Series")
+                        .WithMany()
+                        .HasForeignKey("SeriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Series");
+                });
+
             modelBuilder.Entity("CampaignManager.Domain.Entities.DeliveryEvent", b =>
                 {
                     b.HasOne("CampaignManager.Domain.Entities.Message", "Message")
@@ -872,6 +1066,17 @@ namespace CampaignManager.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("CampaignManager.Domain.Entities.NotificationSettings", b =>
+                {
+                    b.HasOne("CampaignManager.Domain.Entities.Organization", "Organization")
+                        .WithOne()
+                        .HasForeignKey("CampaignManager.Domain.Entities.NotificationSettings", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Organization");

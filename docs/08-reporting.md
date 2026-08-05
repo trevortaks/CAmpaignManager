@@ -1,6 +1,6 @@
 # Dashboard & Reporting Design
 
-## Dashboard (Phase 2)
+## Dashboard ✅ (Phase 2, delivered)
 
 Top row — stat tiles (hero numbers, no chart chrome):
 **Campaigns today · Messages sent today · Failed · Pending · Queue size · Active providers**
@@ -17,7 +17,7 @@ Third row:
 
 All time-series read from pre-aggregated data (see below), never `COUNT(*)` over `Messages`.
 
-## Reports (Phase 2)
+## Reports ✅ (Phase 3, delivered)
 
 | Report | Source |
 |---|---|
@@ -35,5 +35,12 @@ Failed, AvgDeliverySeconds, …)`. Dashboards and reports query only this narrow
 `Messages` table is touched solely by per-campaign detail views (which use `(CampaignId,
 Status)`).
 
-**Exports**: CSV natively; Excel via ClosedXML; PDF via QuestPDF — all streamed
-server-side from the same query objects, capped + paged to protect memory.
+**Exports**: CSV natively; Excel via ClosedXML; PDF via QuestPDF — all generated server-side
+from the same `GetReportQuery` result in the AdminUI `ReportsController` (`ExportCsv` /
+`ExportExcel` / `ExportPdf`), verified producing valid `.xlsx`/`.pdf` files.
+
+**Metrics** (Phase 3): a custom OpenTelemetry meter (`CampaignMetrics`) instruments the send
+pipeline and webhook controller directly — messages sent/failed and provider send duration by
+channel, campaigns created/completed by status, webhooks received by provider — exposed via
+`GET /metrics` (Prometheus format) on both Api and Workers. See docs/09-deployment.md for the
+optional Prometheus/Grafana profile.

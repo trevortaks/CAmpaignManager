@@ -7,6 +7,7 @@ using CampaignManager.Domain.Enums;
 using CampaignManager.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace CampaignManager.Application.Admin.Providers;
 
@@ -18,14 +19,17 @@ public sealed class SaveProviderHandler : IRequestHandler<SaveProviderCommand, G
     private readonly ICurrentTenant _tenant;
     private readonly ICredentialProtector _protector;
     private readonly IProviderRegistry _registry;
+    private readonly IDistributedCache _cache;
 
     public SaveProviderHandler(
-        IAppDbContext db, ICurrentTenant tenant, ICredentialProtector protector, IProviderRegistry registry)
+        IAppDbContext db, ICurrentTenant tenant, ICredentialProtector protector, IProviderRegistry registry,
+        IDistributedCache cache)
     {
         _db = db;
         _tenant = tenant;
         _protector = protector;
         _registry = registry;
+        _cache = cache;
     }
 
     public async Task<Guid> Handle(SaveProviderCommand command, CancellationToken ct)
@@ -46,10 +50,12 @@ public sealed class SaveProviderHandler : IRequestHandler<SaveProviderCommand, G
         }
 
         ProviderConfiguration config;
+        Channel? previousChannel = null;
         if (input.Id is { } id)
         {
             config = await _db.ProviderConfigurations.FirstOrDefaultAsync(p => p.Id == id, ct)
                 ?? throw new NotFoundException(nameof(ProviderConfiguration), id);
+            previousChannel = config.Channel;
         }
         else
         {
@@ -85,6 +91,13 @@ public sealed class SaveProviderHandler : IRequestHandler<SaveProviderCommand, G
         }
 
         await _db.SaveChangesAsync(ct);
+
+        await _cache.RemoveAsync(ProviderConfigCacheKeys.ForChannel(organizationId, channel), ct);
+        if (previousChannel is { } prev && prev != channel)
+        {
+            await _cache.RemoveAsync(ProviderConfigCacheKeys.ForChannel(organizationId, prev), ct);
+        }
+
         return config.Id;
     }
 }
@@ -94,10 +107,12 @@ public sealed record SetProviderEnabledCommand(Guid ProviderId, bool Enabled) : 
 public sealed class SetProviderEnabledHandler : IRequestHandler<SetProviderEnabledCommand>
 {
     private readonly IAppDbContext _db;
+    private readonly IDistributedCache _cache;
 
-    public SetProviderEnabledHandler(IAppDbContext db)
+    public SetProviderEnabledHandler(IAppDbContext db, IDistributedCache cache)
     {
         _db = db;
+        _cache = cache;
     }
 
     public async Task Handle(SetProviderEnabledCommand command, CancellationToken ct)
@@ -107,6 +122,7 @@ public sealed class SetProviderEnabledHandler : IRequestHandler<SetProviderEnabl
             ?? throw new NotFoundException(nameof(ProviderConfiguration), command.ProviderId);
         config.IsEnabled = command.Enabled;
         await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync(ProviderConfigCacheKeys.ForChannel(config.OrganizationId, config.Channel), ct);
     }
 }
 
@@ -117,12 +133,16 @@ public sealed class TestProviderHandler : IRequestHandler<TestProviderCommand, S
     private readonly IAppDbContext _db;
     private readonly IProviderRegistry _registry;
     private readonly ICredentialProtector _protector;
+    private readonly Notifications.INotificationService _notifications;
 
-    public TestProviderHandler(IAppDbContext db, IProviderRegistry registry, ICredentialProtector protector)
+    public TestProviderHandler(
+        IAppDbContext db, IProviderRegistry registry, ICredentialProtector protector,
+        Notifications.INotificationService notifications)
     {
         _db = db;
         _registry = registry;
         _protector = protector;
+        _notifications = notifications;
     }
 
     public async Task<SendResult> Handle(TestProviderCommand command, CancellationToken ct)
@@ -164,6 +184,21 @@ public sealed class TestProviderHandler : IRequestHandler<TestProviderCommand, S
         config.LastTestSucceeded = result.Success;
         config.LastTestError = result.Success ? null : $"{result.ErrorCode}: {result.ErrorMessage}";
         await _db.SaveChangesAsync(ct);
+
+        if (!result.Success)
+        {
+            var isAuthFailure = result.ErrorCode is "missing_credentials" or "401" or "403";
+            await _notifications.NotifyAsync(
+                config.OrganizationId,
+                isAuthFailure
+                    ? Notifications.NotificationEventTypes.ProviderAuthFailed
+                    : Notifications.NotificationEventTypes.ProviderOffline,
+                $"Provider test failed: {config.Name}",
+                $"Connection test for provider '{config.Name}' ({config.ProviderKey}) failed: " +
+                $"{result.ErrorCode}: {result.ErrorMessage}",
+                ct);
+        }
+
         return result;
     }
 }
@@ -173,10 +208,12 @@ public sealed record DeleteProviderCommand(Guid ProviderId) : IRequest;
 public sealed class DeleteProviderHandler : IRequestHandler<DeleteProviderCommand>
 {
     private readonly IAppDbContext _db;
+    private readonly IDistributedCache _cache;
 
-    public DeleteProviderHandler(IAppDbContext db)
+    public DeleteProviderHandler(IAppDbContext db, IDistributedCache cache)
     {
         _db = db;
+        _cache = cache;
     }
 
     public async Task Handle(DeleteProviderCommand command, CancellationToken ct)
@@ -196,5 +233,6 @@ public sealed class DeleteProviderHandler : IRequestHandler<DeleteProviderComman
 
         _db.ProviderConfigurations.Remove(config);
         await _db.SaveChangesAsync(ct);
+        await _cache.RemoveAsync(ProviderConfigCacheKeys.ForChannel(config.OrganizationId, config.Channel), ct);
     }
 }

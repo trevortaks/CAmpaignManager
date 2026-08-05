@@ -28,6 +28,10 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<WebhookDeadLetter> WebhookDeadLetters => Set<WebhookDeadLetter>();
     public DbSet<DailyStatistic> DailyStatistics => Set<DailyStatistic>();
+    public DbSet<CampaignSeries> CampaignSeries => Set<CampaignSeries>();
+    public DbSet<CampaignSeriesRecipient> CampaignSeriesRecipients => Set<CampaignSeriesRecipient>();
+    public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
+    public DbSet<NotificationSettings> NotificationSettings => Set<NotificationSettings>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -53,6 +57,30 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
             e.HasIndex(x => new { x.OrganizationId, x.Status, x.CreatedAtUtc }).IsDescending(false, false, true);
             e.HasOne(x => x.Organization).WithMany().HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.Template).WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => x.SeriesId);
+            e.HasQueryFilter(x =>
+                _currentTenant.OrganizationId == null || x.OrganizationId == _currentTenant.OrganizationId);
+        });
+
+        builder.Entity<CampaignSeries>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Sender).HasMaxLength(320);
+            e.Property(x => x.Subject).HasMaxLength(500);
+            e.Property(x => x.CallbackUrl).HasMaxLength(2000);
+            e.Property(x => x.CronExpression).HasMaxLength(100);
+            e.Property(x => x.RecurringJobId).HasMaxLength(100);
+            e.HasIndex(x => new { x.OrganizationId, x.IsActive });
+            e.HasOne(x => x.Organization).WithMany().HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x =>
+                _currentTenant.OrganizationId == null || x.OrganizationId == _currentTenant.OrganizationId);
+        });
+
+        builder.Entity<CampaignSeriesRecipient>(e =>
+        {
+            e.Property(x => x.Address).HasMaxLength(320);
+            e.HasIndex(x => x.SeriesId);
+            e.HasOne(x => x.Series).WithMany().HasForeignKey(x => x.SeriesId).OnDelete(DeleteBehavior.Cascade);
             e.HasQueryFilter(x =>
                 _currentTenant.OrganizationId == null || x.OrganizationId == _currentTenant.OrganizationId);
         });
@@ -142,6 +170,21 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
             e.Property(x => x.EntityId).HasMaxLength(100);
             e.Property(x => x.IpAddress).HasMaxLength(45);
             e.HasIndex(x => new { x.OrganizationId, x.TimestampUtc });
+        });
+
+        builder.Entity<NotificationLog>(e =>
+        {
+            e.Property(x => x.EventType).HasMaxLength(50);
+            e.Property(x => x.Subject).HasMaxLength(300);
+            e.Property(x => x.Error).HasMaxLength(1024);
+            e.HasIndex(x => new { x.OrganizationId, x.CreatedAtUtc });
+        });
+
+        builder.Entity<NotificationSettings>(e =>
+        {
+            e.HasKey(x => x.OrganizationId);
+            e.Property(x => x.RecipientEmail).HasMaxLength(320);
+            e.HasOne(x => x.Organization).WithOne().HasForeignKey<NotificationSettings>(x => x.OrganizationId);
         });
     }
 }

@@ -103,7 +103,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Default"] =
-                    $"Server=localhost,1433;Database={_databaseName};User Id=sa;Password=CampaignDev!Passw0rd;TrustServerCertificate=True"
+                    $"Server=localhost,1433;Database={_databaseName};User Id=sa;Password=CampaignDev!Passw0rd;TrustServerCertificate=True",
+                // Force the in-memory cache/throttle fallback — integration tests must not
+                // depend on a Redis container being available.
+                ["ConnectionStrings:Redis"] = ""
             });
         });
     }

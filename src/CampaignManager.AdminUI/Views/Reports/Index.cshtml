@@ -1,0 +1,103 @@
+@model CampaignManager.Application.Admin.Reports.ReportSummary
+@{
+    ViewData["Title"] = "Reports";
+    var from = (DateOnly)ViewData["From"]!;
+    var to = (DateOnly)ViewData["To"]!;
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Reports</h1>
+  <div class="btn-group">
+    <a class="btn btn-outline-secondary" asp-action="ExportCsv" asp-route-from="@from" asp-route-to="@to">CSV</a>
+    <a class="btn btn-outline-secondary" asp-action="ExportExcel" asp-route-from="@from" asp-route-to="@to">Excel</a>
+    <a class="btn btn-outline-secondary" asp-action="ExportPdf" asp-route-from="@from" asp-route-to="@to">PDF</a>
+  </div>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-auto">
+    <label class="visually-hidden">From</label>
+    <input class="form-control" type="date" name="from" value="@from.ToString("yyyy-MM-dd")" />
+  </div>
+  <div class="col-auto">
+    <label class="visually-hidden">To</label>
+    <input class="form-control" type="date" name="to" value="@to.ToString("yyyy-MM-dd")" />
+  </div>
+  <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Apply</button></div>
+</form>
+
+<div class="row g-3 mb-3">
+  @foreach (var (label, value) in new (string, string)[]
+  {
+      ("Total sent", Model.TotalSent.ToString("N0")),
+      ("Delivered", Model.TotalDelivered.ToString("N0")),
+      ("Failed", Model.TotalFailed.ToString("N0")),
+      ("Success rate", Model.SuccessRate.ToString("P1"))
+  })
+  {
+    <div class="col"><div class="card"><div class="card-body text-center">
+      <div class="text-muted small">@label</div><div class="fs-3">@value</div>
+    </div></div></div>
+  }
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <div class="card"><div class="card-body">
+      <h2 class="h6 text-muted">Top channels</h2>
+      <table class="table table-sm mb-0"><tbody>
+        @foreach (var (channel, sent) in Model.TopChannels)
+        {
+          <tr><td>@channel</td><td class="text-end">@sent.ToString("N0")</td></tr>
+        }
+      </tbody></table>
+    </div></div>
+  </div>
+  <div class="col-md-6">
+    <div class="card"><div class="card-body">
+      <h2 class="h6 text-muted">Top campaigns</h2>
+      <table class="table table-sm mb-0"><tbody>
+        @foreach (var (campaign, sent) in Model.TopCampaigns)
+        {
+          <tr><td>@campaign</td><td class="text-end">@sent.ToString("N0")</td></tr>
+        }
+        @if (Model.TopCampaigns.Count == 0)
+        {
+          <tr><td class="text-muted">No campaigns in range.</td></tr>
+        }
+      </tbody></table>
+    </div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="h6 text-muted">Daily detail</h2>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>Date</th><th>Channel</th><th>Provider</th><th class="text-end">Sent</th>
+          <th class="text-end">Delivered</th><th class="text-end">Failed</th><th class="text-end">Rejected</th>
+          <th class="text-end">Expired</th><th class="text-end">Avg delivery (s)</th></tr></thead>
+        <tbody>
+          @foreach (var row in Model.Rows)
+          {
+            <tr>
+              <td>@row.Date.ToString("yyyy-MM-dd")</td>
+              <td>@row.Channel</td>
+              <td>@row.Provider</td>
+              <td class="text-end">@row.Sent.ToString("N0")</td>
+              <td class="text-end">@row.Delivered.ToString("N0")</td>
+              <td class="text-end">@row.Failed.ToString("N0")</td>
+              <td class="text-end">@row.Rejected.ToString("N0")</td>
+              <td class="text-end">@row.Expired.ToString("N0")</td>
+              <td class="text-end">@(row.AvgDeliverySeconds?.ToString("0.0") ?? "—")</td>
+            </tr>
+          }
+          @if (Model.Rows.Count == 0)
+          {
+            <tr><td colspan="9" class="text-muted">No data in range — the rollup job runs hourly.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

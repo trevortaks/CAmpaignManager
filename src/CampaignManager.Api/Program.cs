@@ -8,6 +8,7 @@ using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -147,6 +148,29 @@ try
             {
                 tracing.AddConsoleExporter();
             }
+
+            if (builder.Configuration["OpenTelemetry:OtlpEndpoint"] is { Length: > 0 } otlpEndpoint)
+            {
+                tracing.AddOtlpExporter(otlp => otlp.Endpoint = new Uri(otlpEndpoint));
+            }
+        })
+        .WithMetrics(metrics =>
+        {
+            metrics.AddMeter(CampaignManager.Application.Observability.CampaignMetrics.MeterName);
+            metrics.AddAspNetCoreInstrumentation();
+            metrics.AddHttpClientInstrumentation();
+            metrics.AddRuntimeInstrumentation();
+            // Scrape target for Prometheus (see podman-compose.yml --profile observability).
+            metrics.AddPrometheusExporter();
+            if (builder.Configuration.GetValue<bool>("OpenTelemetry:ConsoleExporter"))
+            {
+                metrics.AddConsoleExporter();
+            }
+
+            if (builder.Configuration["OpenTelemetry:OtlpEndpoint"] is { Length: > 0 } otlpEndpoint)
+            {
+                metrics.AddOtlpExporter(otlp => otlp.Endpoint = new Uri(otlpEndpoint));
+            }
         });
 
     var app = builder.Build();
@@ -171,6 +195,7 @@ try
     {
         Predicate = check => check.Tags.Contains("ready")
     });
+    app.MapPrometheusScrapingEndpoint(); // GET /metrics
 
     // Apply migrations and seed development data on startup.
     if (app.Configuration.GetValue("Database:MigrateOnStartup", true))

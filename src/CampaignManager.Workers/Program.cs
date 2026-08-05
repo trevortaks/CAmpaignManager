@@ -3,6 +3,8 @@ using CampaignManager.Infrastructure;
 using Hangfire;
 using Hangfire.Dashboard;
 using Hangfire.SqlServer;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -42,9 +44,31 @@ try
     builder.Services.AddHealthChecks()
         .AddSqlServer(builder.Configuration.GetConnectionString("Default")!, name: "sqlserver");
 
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService("CampaignManager.Workers"))
+        .WithMetrics(metrics =>
+        {
+            // The send pipeline (CampaignProcessingJob) runs here, so this is where
+            // campaignmanager.messages.* and campaignmanager.provider.send.duration originate.
+            metrics.AddMeter(CampaignManager.Application.Observability.CampaignMetrics.MeterName);
+            metrics.AddHttpClientInstrumentation();
+            metrics.AddRuntimeInstrumentation();
+            metrics.AddPrometheusExporter();
+            if (builder.Configuration.GetValue<bool>("OpenTelemetry:ConsoleExporter"))
+            {
+                metrics.AddConsoleExporter();
+            }
+
+            if (builder.Configuration["OpenTelemetry:OtlpEndpoint"] is { Length: > 0 } otlpEndpoint)
+            {
+                metrics.AddOtlpExporter(otlp => otlp.Endpoint = new Uri(otlpEndpoint));
+            }
+        });
+
     var app = builder.Build();
 
     app.MapHealthChecks("/health");
+    app.MapPrometheusScrapingEndpoint(); // GET /metrics
     IDashboardAuthorizationFilter dashboardAuth = app.Environment.IsDevelopment()
         ? new AllowAllDashboardAuthorizationFilter()
         : new BasicAuthDashboardAuthorizationFilter(

@@ -8,6 +8,8 @@ public class Campaign
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
+    /// <summary>Set when this campaign was materialized from a CampaignSeries occurrence.</summary>
+    public Guid? SeriesId { get; set; }
     public required string TrackingId { get; set; }
     public required string Name { get; set; }
     public Channel Channel { get; set; }
