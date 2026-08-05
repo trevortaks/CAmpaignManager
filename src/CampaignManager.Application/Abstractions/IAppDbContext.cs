@@ -14,6 +14,8 @@ public interface IAppDbContext
     DbSet<MessageTemplate> MessageTemplates { get; }
     DbSet<ApiKey> ApiKeys { get; }
     DbSet<AuditLog> AuditLogs { get; }
+    DbSet<WebhookDeadLetter> WebhookDeadLetters { get; }
+    DbSet<DailyStatistic> DailyStatistics { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

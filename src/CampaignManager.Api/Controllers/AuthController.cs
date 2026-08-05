@@ -21,6 +21,7 @@ public sealed class AuthController : ControllerBase
 
     [HttpPost("token")]
     [AllowAnonymous]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("token")]
     [ProducesResponseType<TokenResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Token([FromBody] TokenRequest request)

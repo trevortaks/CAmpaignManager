@@ -22,7 +22,8 @@ public sealed class TenantResolutionMiddleware
             var userClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                             ?? context.User.FindFirst("sub")?.Value;
             Guid.TryParse(userClaim, out var userId);
-            tenantSetter.Set(organizationId, userId == Guid.Empty ? null : userId);
+            tenantSetter.Set(organizationId, userId == Guid.Empty ? null : userId,
+                context.Connection.RemoteIpAddress?.ToString());
         }
 
         await _next(context);

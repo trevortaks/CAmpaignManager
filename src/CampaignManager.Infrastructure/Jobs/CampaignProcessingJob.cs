@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using System.Text.Json;
 using CampaignManager.Application.Abstractions;
 using CampaignManager.Application.Jobs;
@@ -26,6 +27,7 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
     private readonly FailoverSender _failoverSender;
     private readonly ITemplateRenderer _templateRenderer;
     private readonly IBackgroundJobClient _jobClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<CampaignProcessingJob> _logger;
 
     public CampaignProcessingJob(
@@ -35,6 +37,7 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
         FailoverSender failoverSender,
         ITemplateRenderer templateRenderer,
         IBackgroundJobClient jobClient,
+        IHttpClientFactory httpClientFactory,
         ILogger<CampaignProcessingJob> logger)
     {
         _db = db;
@@ -43,6 +46,7 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
         _failoverSender = failoverSender;
         _templateRenderer = templateRenderer;
         _jobClient = jobClient;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -241,8 +245,50 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
         campaign.CompletedAtUtc = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
+        if (!string.IsNullOrEmpty(campaign.CallbackUrl))
+        {
+            _jobClient.Enqueue<ICampaignProcessingJob>(
+                j => j.NotifyCompletionAsync(organizationId, campaignId));
+        }
+
         _logger.LogInformation("Finalized campaign {CampaignId} as {Status} (sent {Sent}, failed {Failed})",
             campaignId, campaign.Status, campaign.SentCount, campaign.FailedCount);
+    }
+
+    [AutomaticRetry(Attempts = 5, DelaysInSeconds = [60, 300, 900, 3600, 7200])]
+    public async Task NotifyCompletionAsync(Guid organizationId, Guid campaignId)
+    {
+        _tenantSetter.Set(organizationId);
+        var campaign = await _db.Campaigns.AsNoTracking().FirstOrDefaultAsync(c => c.Id == campaignId);
+        if (campaign is null || string.IsNullOrEmpty(campaign.CallbackUrl) || !campaign.IsTerminal)
+        {
+            return;
+        }
+
+        if (!await Security.SsrfGuard.IsSafePublicUrlAsync(campaign.CallbackUrl, CancellationToken.None))
+        {
+            _logger.LogWarning(
+                "Campaign {CampaignId} callback url rejected by SSRF guard: {CallbackUrl}",
+                campaignId, campaign.CallbackUrl);
+            return; // permanent: do not retry a forbidden destination
+        }
+
+        var client = _httpClientFactory.CreateClient("campaign-callbacks");
+        using var response = await client.PostAsJsonAsync(campaign.CallbackUrl, new
+        {
+            campaignId = campaign.Id,
+            trackingId = campaign.TrackingId,
+            status = campaign.Status.ToString(),
+            totalRecipients = campaign.TotalRecipients,
+            sent = campaign.SentCount,
+            delivered = campaign.DeliveredCount,
+            failed = campaign.FailedCount,
+            completedAtUtc = campaign.CompletedAtUtc
+        });
+        response.EnsureSuccessStatusCode(); // non-2xx throws → Hangfire retries with backoff
+
+        _logger.LogInformation("Delivered completion callback for campaign {CampaignId} to {CallbackUrl}",
+            campaignId, campaign.CallbackUrl);
     }
 
     private async Task ExpireQueuedInRange(Guid campaignId, long firstMessageId, long lastMessageId)

@@ -1,0 +1,35 @@
+@model IReadOnlyList<CampaignManager.Application.Admin.Templates.TemplateSummary>
+@{
+    ViewData["Title"] = "Templates";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Templates</h1>
+  <a class="btn btn-primary" asp-action="Edit">New template</a>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>Name</th><th>Channel</th><th>Body</th><th>Active</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+      @foreach (var template in Model)
+      {
+        <tr>
+          <td><a asp-action="Edit" asp-route-id="@template.Id">@template.Name</a></td>
+          <td>@template.Channel</td>
+          <td class="text-truncate" style="max-width: 360px"><code>@template.Body</code></td>
+          <td>@(template.IsActive ? "✔" : "—")</td>
+          <td class="text-end">
+            <form method="post" asp-action="Delete" asp-route-id="@template.Id" class="d-inline">
+              @Html.AntiForgeryToken()
+              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      }
+      @if (Model.Count == 0)
+      {
+        <tr><td colspan="5" class="text-muted">No templates yet.</td></tr>
+      }
+    </tbody>
+  </table>
+</div>

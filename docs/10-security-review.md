@@ -16,23 +16,25 @@
 | Auth separation | JWT-only in Api (`AddIdentityCore`), cookies confined to AdminUI |
 | Password policy | Identity defaults + 10-char minimum, lockout on failed sign-ins |
 
-## Required before production (gap list)
+## Added in Phase 2
+
+| Area | Measure |
+|---|---|
+| Rate limiting | ASP.NET `AddRateLimiter`: `/api/auth/token` 5/min/IP (brute-force), campaign creation 60/min per principal, webhooks 600/min per key+IP — limits configurable under `RateLimits:*` |
+| Hangfire dashboard | Allow-all only in Development; other environments require HTTP Basic credentials (`HangfireDashboard:Username/Password`, constant-time compare) and refuse to start without a password |
+| Webhook signatures | Meta `X-Hub-Signature-256` (HMAC-SHA256) and Twilio `X-Twilio-Signature` (HMAC-SHA1 over URL+body) verifiers, unit-tested; shared secret remains the generic fallback |
+| Audit logging | `AuditSaveChangesInterceptor` records Added/Modified/Deleted for admin entities (who/what/old/new/IP) with secrets redacted; audit viewer in AdminUI |
+| Callback SSRF | `SsrfGuard` resolves the callback host and rejects loopback/private/link-local/CGNAT/multicast targets (IPv4+IPv6), verified by unit tests and live; callback HttpClient disables redirects and uses a 15 s timeout |
+| Credential handling in UI | Provider credentials are write-only in the admin form (stored keys listed by name; values never rendered) |
+| API key lifecycle | Admin UI creation (plaintext shown once), revocation, expiry |
+
+## Required before production (remaining gap list)
 
 1. **Data Protection key ring**: persist to durable shared storage, encrypt keys at rest
    (certificate), and back up — key loss makes stored provider credentials unrecoverable.
 2. **Secrets out of appsettings**: SA password, `Jwt:SigningKey` → environment/vault; rotate
    the dev values committed for local convenience.
-3. **Rate limiting**: ASP.NET `AddRateLimiter` — per-API-key fixed window on campaign
-   creation, tighter window on `/api/auth/token` (brute-force) and webhooks (flooding).
-4. **Hangfire dashboard**: replace the dev allow-all filter with an authenticated admin-role
-   filter (it can trigger/delete jobs).
-5. **HTTPS enforced** at ingress + HSTS; secure/samesite cookies in AdminUI.
-6. **Webhook hardening**: where providers sign callbacks (Twilio `X-Twilio-Signature`, Meta
-   HMAC), verify signatures instead of the generic shared secret.
-7. **Audit logging**: populate `AuditLogs` from an EF SaveChanges interceptor for admin
-   mutations (who/what/old/new/IP).
-8. **Callback URL SSRF**: when campaign-completion callbacks are implemented, validate the
-   URL against private-address ranges and use a no-redirect HttpClient.
-9. **Security headers** in AdminUI: CSP (drop the Chart.js CDN for a bundled copy), the
+3. **HTTPS enforced** at ingress + HSTS; secure/samesite cookies in AdminUI.
+4. **Security headers** in AdminUI: CSP (drop the Chart.js CDN for a bundled copy), the
    frame/nosniff/referrer trio.
-10. **Dependency scanning + `dotnet list package --vulnerable`** in CI.
+5. **Dependency scanning + `dotnet list package --vulnerable`** in CI.

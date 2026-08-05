@@ -1,0 +1,55 @@
+@model IReadOnlyList<CampaignManager.Application.Admin.ApiKeys.ApiKeySummary>
+@{
+    ViewData["Title"] = "API Keys";
+}
+<h1 class="h3 mb-3">API Keys</h1>
+
+@if (TempData["NewKey"] is string newKey)
+{
+  <div class="alert alert-warning">
+    <strong>Copy this key now — it will not be shown again:</strong>
+    <code class="user-select-all d-block mt-1">@newKey</code>
+  </div>
+}
+
+<form method="post" asp-action="Create" class="row g-2 mb-4">
+  @Html.AntiForgeryToken()
+  <div class="col-auto"><input class="form-control" name="name" placeholder="Key name" required /></div>
+  <div class="col-auto"><input class="form-control" type="datetime-local" name="expiresAtUtc" /></div>
+  <div class="col-auto"><button class="btn btn-primary" type="submit">Create key</button></div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Expires</th><th>Last used</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+      @foreach (var key in Model)
+      {
+        <tr>
+          <td>@key.Name</td>
+          <td><code>@key.KeyPrefix…</code></td>
+          <td>@key.CreatedAtUtc.ToString("yyyy-MM-dd")</td>
+          <td>@(key.ExpiresAtUtc?.ToString("yyyy-MM-dd") ?? "—")</td>
+          <td>@(key.LastUsedAtUtc?.ToString("yyyy-MM-dd HH:mm") ?? "never")</td>
+          <td>
+            @if (key.RevokedAtUtc is not null)
+            { <span class="badge text-bg-danger">Revoked</span> }
+            else if (key.ExpiresAtUtc is not null && key.ExpiresAtUtc < DateTime.UtcNow)
+            { <span class="badge text-bg-secondary">Expired</span> }
+            else
+            { <span class="badge text-bg-success">Active</span> }
+          </td>
+          <td class="text-end">
+            @if (key.RevokedAtUtc is null)
+            {
+              <form method="post" asp-action="Revoke" asp-route-id="@key.Id" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-sm btn-outline-danger" type="submit">Revoke</button>
+              </form>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

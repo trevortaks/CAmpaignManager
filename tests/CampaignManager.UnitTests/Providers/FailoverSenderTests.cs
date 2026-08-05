@@ -16,7 +16,13 @@ public class FailoverSenderTests
     private static readonly ProviderCredentials EmptyCredentials = new(
         new Dictionary<string, string>(), new Dictionary<string, string>());
 
-    private readonly FailoverSender _sender = new(NullLogger<FailoverSender>.Instance);
+    private sealed class NoOpThrottle : IProviderThrottle
+    {
+        public Task WaitAsync(Guid providerConfigurationId, int? rateLimitPerMinute, CancellationToken ct) =>
+            Task.CompletedTask;
+    }
+
+    private readonly FailoverSender _sender = new(new NoOpThrottle(), NullLogger<FailoverSender>.Instance);
 
     private static ResolvedProvider Provider(SendResult result, out IChannelProvider mock)
     {

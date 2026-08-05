@@ -9,10 +9,12 @@ public sealed class CurrentTenant : ICurrentTenant, ITenantSetter
 {
     public Guid? OrganizationId { get; private set; }
     public Guid? UserId { get; private set; }
+    public string? IpAddress { get; private set; }
 
-    public void Set(Guid organizationId, Guid? userId = null)
+    public void Set(Guid organizationId, Guid? userId = null, string? ipAddress = null)
     {
         OrganizationId = organizationId;
         UserId = userId;
+        IpAddress = ipAddress;
     }
 }

@@ -65,6 +65,42 @@ try
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
 
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+        // Brute-force protection on token issuance, per client IP.
+        options.AddPolicy("token", context =>
+            System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = builder.Configuration.GetValue("RateLimits:TokenPerMinute", 5),
+                    Window = TimeSpan.FromMinutes(1)
+                }));
+
+        // Campaign submission per authenticated principal (API key id or user id).
+        options.AddPolicy("campaigns", context =>
+            System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = builder.Configuration.GetValue("RateLimits:CampaignsPerMinute", 60),
+                    Window = TimeSpan.FromMinutes(1)
+                }));
+
+        // Webhook flood absorption per provider key + source IP.
+        options.AddPolicy("webhooks", context =>
+            System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                $"{context.Request.Path}|{context.Connection.RemoteIpAddress}",
+                _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = builder.Configuration.GetValue("RateLimits:WebhooksPerMinute", 600),
+                    Window = TimeSpan.FromMinutes(1)
+                }));
+    });
+
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
@@ -124,6 +160,7 @@ try
     app.UseAuthentication();
     app.UseMiddleware<TenantResolutionMiddleware>();
     app.UseAuthorization();
+    app.UseRateLimiter();
 
     app.MapControllers();
     app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions

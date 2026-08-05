@@ -14,4 +14,7 @@ public interface ICampaignProcessingJob
     /// <summary>Computes final campaign status once no messages remain Queued/Processing;
     /// reschedules itself while work is outstanding.</summary>
     Task FinalizeAsync(Guid organizationId, Guid campaignId);
+
+    /// <summary>POSTs the completion summary to the campaign's CallbackUrl (SSRF-guarded).</summary>
+    Task NotifyCompletionAsync(Guid organizationId, Guid campaignId);
 }

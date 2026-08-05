@@ -1,0 +1,89 @@
+@model CampaignManager.Application.Admin.Templates.TemplateSummary?
+@{
+    ViewData["Title"] = Model is null ? "New template" : "Edit template";
+}
+<h1 class="h3 mb-3">@ViewData["Title"]</h1>
+
+<div class="row">
+  <div class="col-lg-6">
+    <form method="post" asp-action="Save">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="id" value="@Model?.Id" />
+      <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input class="form-control" name="name" required value="@Model?.Name" />
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Channel</label>
+          <select class="form-select" name="channel">
+            @foreach (var channel in new[] { "Sms", "Email", "WhatsApp" })
+            {
+              <option value="@channel" selected="@(channel == Model?.Channel)">@channel</option>
+            }
+          </select>
+        </div>
+        <div class="col-md-6 d-flex align-items-end">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="isActive" value="true"
+                   checked="@(Model?.IsActive ?? true)" id="isActive" />
+            <label class="form-check-label" for="isActive">Active</label>
+          </div>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Subject (email only)</label>
+        <input class="form-control" name="subject" id="subject" value="@Model?.Subject" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Body — use {{Placeholder}} tokens</label>
+        <textarea class="form-control font-monospace" rows="6" name="body" id="body" required>@Model?.Body</textarea>
+      </div>
+      <button class="btn btn-primary" type="submit">Save</button>
+      <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+    </form>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 text-muted">Live preview</h2>
+        <label class="form-label small">Sample data (one key=value per line)</label>
+        <textarea class="form-control font-monospace mb-2" rows="3" id="sampleData">FirstName=Ada
+Date=Friday 14:00</textarea>
+        <div class="border rounded p-3 bg-light">
+          <div id="previewSubject" class="fw-bold mb-1"></div>
+          <div id="previewBody" style="white-space: pre-wrap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+  <script>
+    async function refreshPreview() {
+      const sampleData = {};
+      for (const line of document.getElementById('sampleData').value.split('\n')) {
+        const separator = line.indexOf('=');
+        if (separator > 0) sampleData[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
+      }
+      const response = await fetch('@Url.Action("Preview")', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          body: document.getElementById('body').value,
+          subject: document.getElementById('subject').value || null,
+          sampleData
+        })
+      });
+      if (!response.ok) return;
+      const preview = await response.json();
+      document.getElementById('previewSubject').textContent = preview.subject ?? '';
+      document.getElementById('previewBody').textContent = preview.body;
+    }
+    for (const id of ['body', 'subject', 'sampleData']) {
+      document.getElementById(id).addEventListener('input', refreshPreview);
+    }
+    refreshPreview();
+  </script>
+}

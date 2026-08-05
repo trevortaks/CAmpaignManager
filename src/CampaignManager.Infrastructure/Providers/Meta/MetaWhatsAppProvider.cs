@@ -6,7 +6,7 @@ using CampaignManager.Domain.Enums;
 namespace CampaignManager.Infrastructure.Providers.Meta;
 
 /// <summary>WhatsApp via Meta Cloud API. Credentials: accessToken; settings: phoneNumberId.</summary>
-public sealed class MetaWhatsAppProvider : IChannelProvider
+public sealed class MetaWhatsAppProvider : IChannelProvider, ITestableProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
 
@@ -59,6 +59,32 @@ public sealed class MetaWhatsAppProvider : IChannelProvider
         return response.StatusCode == HttpStatusCode.BadRequest
             ? SendResult.Rejected("400", error)
             : SendResult.TransientFailure(((int)response.StatusCode).ToString(), error);
+    }
+
+    /// <summary>Verifies the token by fetching the phone-number resource (no message sent).</summary>
+    public async Task<SendResult> TestAsync(ProviderCredentials credentials, CancellationToken ct)
+    {
+        if (!credentials.Secrets.TryGetValue("accessToken", out var accessToken))
+        {
+            return SendResult.TransientFailure("missing_credentials", "Meta accessToken not configured.");
+        }
+
+        var phoneNumberId = credentials.Settings.GetValueOrDefault("phoneNumberId");
+        if (string.IsNullOrEmpty(phoneNumberId))
+        {
+            return SendResult.TransientFailure("missing_settings", "Meta phoneNumberId not configured.");
+        }
+
+        var client = _httpClientFactory.CreateClient("meta-whatsapp");
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get, $"https://graph.facebook.com/v19.0/{phoneNumberId}");
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+        using var response = await client.SendAsync(request, ct);
+        return response.IsSuccessStatusCode
+            ? SendResult.Ok("test-ok")
+            : SendResult.TransientFailure(((int)response.StatusCode).ToString(),
+                await response.Content.ReadAsStringAsync(ct));
     }
 
     private sealed record MetaSendResponse(List<MetaMessageId>? Messages);

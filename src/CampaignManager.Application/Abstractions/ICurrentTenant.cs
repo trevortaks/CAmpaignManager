@@ -6,10 +6,11 @@ public interface ICurrentTenant
 {
     Guid? OrganizationId { get; }
     Guid? UserId { get; }
+    string? IpAddress { get; }
 }
 
 /// <summary>Settable variant used by background jobs to establish tenant scope.</summary>
 public interface ITenantSetter
 {
-    void Set(Guid organizationId, Guid? userId = null);
+    void Set(Guid organizationId, Guid? userId = null, string? ipAddress = null);
 }

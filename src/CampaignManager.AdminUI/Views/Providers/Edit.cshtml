@@ -1,0 +1,82 @@
+@model CampaignManager.Application.Admin.Providers.ProviderDetail?
+@{
+    ViewData["Title"] = Model is null ? "Add provider" : "Edit provider";
+    var settingsRaw = Model is null ? "" : string.Join("\n", Model.Settings.Select(s => $"{s.Key}={s.Value}"));
+}
+<h1 class="h3 mb-3">@ViewData["Title"]</h1>
+
+<form method="post" asp-action="Save" class="col-lg-7">
+  @Html.AntiForgeryToken()
+  <input type="hidden" name="id" value="@Model?.Id" />
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Name</label>
+      <input class="form-control" name="name" required value="@Model?.Name" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Channel</label>
+      <select class="form-select" name="channel">
+        @foreach (var channel in new[] { "Sms", "Email", "WhatsApp" })
+        {
+          <option value="@channel" selected="@(channel == Model?.Channel)">@channel</option>
+        }
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Provider key</label>
+      <select class="form-select" name="providerKey">
+        @foreach (var key in new[] { "fake-sms", "fake-email", "fake-whatsapp", "twilio", "smtp", "meta-whatsapp" })
+        {
+          <option value="@key" selected="@(key == Model?.ProviderKey)">@key</option>
+        }
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Priority (lower = preferred)</label>
+      <input class="form-control" type="number" name="priority" value="@(Model?.Priority ?? 10)" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Rate limit / minute</label>
+      <input class="form-control" type="number" name="rateLimitPerMinute" value="@Model?.RateLimitPerMinute" placeholder="unlimited" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Max retries (0–5)</label>
+      <input class="form-control" type="number" name="maxRetries" value="@(Model?.MaxRetries ?? 0)" min="0" max="5" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Retry delay (s)</label>
+      <input class="form-control" type="number" name="retryDelaySeconds" value="@(Model?.RetryDelaySeconds ?? 2)" min="1" />
+    </div>
+    <div class="col-12">
+      <label class="form-label">Settings (non-secret, one key=value per line)</label>
+      <textarea class="form-control font-monospace" rows="3" name="settingsRaw"
+                placeholder="fromNumber=+15551234567">@settingsRaw</textarea>
+    </div>
+    <div class="col-12">
+      <label class="form-label">
+        Credentials (secret, one key=value per line)
+        @if (Model?.CredentialKeys.Count > 0)
+        {
+          <span class="text-muted">— stored keys: @string.Join(", ", Model.CredentialKeys); leave blank to keep</span>
+        }
+      </label>
+      <textarea class="form-control font-monospace" rows="3" name="credentialsRaw"
+                placeholder="accountSid=...&#10;authToken=..." autocomplete="off"></textarea>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Webhook secret</label>
+      <input class="form-control" name="webhookSecret" value="@Model?.WebhookSecret" autocomplete="off" />
+    </div>
+    <div class="col-md-6 d-flex align-items-end">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="isEnabled" value="true"
+               checked="@(Model?.IsEnabled ?? true)" id="isEnabled" />
+        <label class="form-check-label" for="isEnabled">Enabled</label>
+      </div>
+    </div>
+  </div>
+  <div class="mt-3">
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+  </div>
+</form>

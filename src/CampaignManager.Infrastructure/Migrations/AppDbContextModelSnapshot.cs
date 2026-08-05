@@ -250,6 +250,62 @@ namespace CampaignManager.Infrastructure.Migrations
                     b.ToTable("CampaignRecipients");
                 });
 
+            modelBuilder.Entity("CampaignManager.Domain.Entities.DailyStatistic", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<double?>("AvgDeliverySeconds")
+                        .HasColumnType("float");
+
+                    b.Property<byte>("Channel")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Delivered")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Expired")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Failed")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ProviderConfigurationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Queued")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Read")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rejected")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Sent")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Date", "Channel", "ProviderConfigurationId")
+                        .IsUnique()
+                        .HasFilter("[ProviderConfigurationId] IS NOT NULL");
+
+                    b.ToTable("DailyStatistics");
+                });
+
             modelBuilder.Entity("CampaignManager.Domain.Entities.DeliveryEvent", b =>
                 {
                     b.Property<long>("Id")
@@ -439,6 +495,18 @@ namespace CampaignManager.Infrastructure.Migrations
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("bit");
 
+                    b.Property<string>("LastTestError")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool?>("LastTestSucceeded")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastTestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxRetries")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -455,6 +523,12 @@ namespace CampaignManager.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("RateLimitPerMinute")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RetryDelaySeconds")
+                        .HasColumnType("int");
+
                     b.Property<string>("SettingsJson")
                         .HasColumnType("nvarchar(max)");
 
@@ -467,6 +541,56 @@ namespace CampaignManager.Infrastructure.Migrations
                     b.HasIndex("OrganizationId", "Channel", "Priority");
 
                     b.ToTable("ProviderConfigurations");
+                });
+
+            modelBuilder.Entity("CampaignManager.Domain.Entities.WebhookDeadLetter", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("AbandonedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTime?>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProviderKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ProviderMessageId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ReplayCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReportedStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("ResolvedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceivedAtUtc")
+                        .HasFilter("[ResolvedAtUtc] IS NULL AND [AbandonedAtUtc] IS NULL");
+
+                    b.ToTable("WebhookDeadLetters");
                 });
 
             modelBuilder.Entity("CampaignManager.Infrastructure.Identity.AppUser", b =>

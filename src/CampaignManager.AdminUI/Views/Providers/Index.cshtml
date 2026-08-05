@@ -1,0 +1,68 @@
+@model IReadOnlyList<CampaignManager.Application.Admin.Providers.ProviderSummary>
+@{
+    ViewData["Title"] = "Providers";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Providers</h1>
+  <a class="btn btn-primary" asp-action="Edit">Add provider</a>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead>
+      <tr>
+        <th>Name</th><th>Channel</th><th>Key</th><th class="text-end">Priority</th>
+        <th class="text-end">Rate limit</th><th class="text-end">Retries</th>
+        <th>Status</th><th>Last test</th><th class="text-end">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (var provider in Model)
+      {
+        <tr>
+          <td><a asp-action="Edit" asp-route-id="@provider.Id">@provider.Name</a></td>
+          <td>@provider.Channel</td>
+          <td><code>@provider.ProviderKey</code></td>
+          <td class="text-end">@provider.Priority</td>
+          <td class="text-end">@(provider.RateLimitPerMinute?.ToString() ?? "—")</td>
+          <td class="text-end">@provider.MaxRetries × @provider.RetryDelaySeconds s</td>
+          <td>
+            @if (provider.IsEnabled)
+            { <span class="badge text-bg-success">Enabled</span> }
+            else
+            { <span class="badge text-bg-secondary">Disabled</span> }
+          </td>
+          <td>
+            @if (provider.LastTestedAtUtc is null)
+            { <span class="text-muted">never</span> }
+            else if (provider.LastTestSucceeded == true)
+            { <span class="text-success">✔ @provider.LastTestedAtUtc?.ToString("MM-dd HH:mm")</span> }
+            else
+            { <span class="text-danger" title="@provider.LastTestError">✘ @provider.LastTestedAtUtc?.ToString("MM-dd HH:mm")</span> }
+          </td>
+          <td class="text-end">
+            <form method="post" asp-action="Test" asp-route-id="@provider.Id" class="d-inline">
+              @Html.AntiForgeryToken()
+              <button class="btn btn-sm btn-outline-primary" type="submit">Test</button>
+            </form>
+            <form method="post" asp-action="SetEnabled" asp-route-id="@provider.Id"
+                  asp-route-enabled="@(!provider.IsEnabled)" class="d-inline">
+              @Html.AntiForgeryToken()
+              <button class="btn btn-sm btn-outline-secondary" type="submit">
+                @(provider.IsEnabled ? "Disable" : "Enable")
+              </button>
+            </form>
+            <form method="post" asp-action="Delete" asp-route-id="@provider.Id" class="d-inline">
+              @Html.AntiForgeryToken()
+              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      }
+      @if (Model.Count == 0)
+      {
+        <tr><td colspan="9" class="text-muted">No providers configured.</td></tr>
+      }
+    </tbody>
+  </table>
+</div>

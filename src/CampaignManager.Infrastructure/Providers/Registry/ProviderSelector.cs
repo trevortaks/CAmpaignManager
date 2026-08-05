@@ -53,7 +53,9 @@ public sealed class ProviderSelector : IProviderSelector
                 ? new Dictionary<string, string>()
                 : System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(config.SettingsJson) ?? [];
 
-            resolved.Add(new ResolvedProvider(config.Id, provider, new ProviderCredentials(secrets, settings)));
+            resolved.Add(new ResolvedProvider(
+                config.Id, provider, new ProviderCredentials(secrets, settings),
+                config.MaxRetries, config.RetryDelaySeconds, config.RateLimitPerMinute));
         }
 
         return resolved;

@@ -1,0 +1,81 @@
+@model IReadOnlyList<CampaignManager.Domain.Entities.AuditLog>
+@{
+    ViewData["Title"] = "Audit log";
+    var page = (int)(ViewData["Page"] ?? 1);
+}
+<h1 class="h3 mb-3">Audit log</h1>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-auto">
+    <select class="form-select" name="entityType">
+      <option value="">All entities</option>
+      @foreach (var entity in new[] { "Campaign", "ProviderConfiguration", "MessageTemplate", "ApiKey", "Organization" })
+      {
+        <option value="@entity" selected="@(entity == (string?)ViewData["EntityType"])">@entity</option>
+      }
+    </select>
+  </div>
+  <div class="col-auto">
+    <select class="form-select" name="action">
+      <option value="">All actions</option>
+      @foreach (var action in new[] { "Added", "Modified", "Deleted" })
+      {
+        <option value="@action" selected="@(action == (string?)ViewData["Action"])">@action</option>
+      }
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-outline-primary" type="submit">Filter</button></div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover align-middle">
+    <thead><tr><th>When (UTC)</th><th>User</th><th>IP</th><th>Action</th><th>Entity</th><th>Changes</th></tr></thead>
+    <tbody>
+      @foreach (var log in Model)
+      {
+        <tr>
+          <td class="text-nowrap">@log.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+          <td class="text-truncate" style="max-width:140px">@(log.UserId?.ToString() ?? "system")</td>
+          <td>@log.IpAddress</td>
+          <td>@log.Action</td>
+          <td>@log.EntityType <code class="small">@log.EntityId</code></td>
+          <td>
+            @if (log.OldValuesJson is not null || log.NewValuesJson is not null)
+            {
+              <details>
+                <summary class="small text-muted">diff</summary>
+                @if (log.OldValuesJson is not null)
+                {
+                  <div class="small"><span class="text-danger">old:</span> <code>@log.OldValuesJson</code></div>
+                }
+                @if (log.NewValuesJson is not null)
+                {
+                  <div class="small"><span class="text-success">new:</span> <code>@log.NewValuesJson</code></div>
+                }
+              </details>
+            }
+          </td>
+        </tr>
+      }
+      @if (Model.Count == 0)
+      {
+        <tr><td colspan="6" class="text-muted">No audit entries.</td></tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<nav>
+  <ul class="pagination">
+    @if (page > 1)
+    {
+      <li class="page-item"><a class="page-link" asp-action="Index" asp-route-page="@(page - 1)"
+          asp-route-entityType="@ViewData["EntityType"]" asp-route-action="@ViewData["Action"]">Previous</a></li>
+    }
+    @if (Model.Count == 50)
+    {
+      <li class="page-item"><a class="page-link" asp-action="Index" asp-route-page="@(page + 1)"
+          asp-route-entityType="@ViewData["EntityType"]" asp-route-action="@ViewData["Action"]">Next</a></li>
+    }
+  </ul>
+</nav>

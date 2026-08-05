@@ -9,17 +9,28 @@ SMTP/Meta stubs), Hangfire dispatch→batch→finalize pipeline, generic deliver
 template rendering, AdminUI shell (login, campaign list/detail + chart), unit + integration
 tests, smoke script, architecture docs.
 
-## Phase 2 — Operability & administration (next)
+## Phase 2 — Operability & administration ✅ (delivered)
 
-- Provider CRUD UI with credential entry, **test connection**, per-provider rate limits and
-  retry policies; provider health tracking.
-- Template CRUD + preview API/UI; recipient CSV upload (streamed) with validation report.
-- Audit logging via SaveChanges interceptor + audit viewer.
-- API rate limiting; Hangfire dashboard auth; webhook signature verification (Twilio/Meta).
-- Dead-letter table for unmatched webhooks + replay job; requeue-transient-failures sweep.
-- Campaign completion callbacks (`CallbackUrl`) with SSRF guards and retry.
-- `DailyStatistics` rollup job; dashboard page with tiles and trend charts.
-- API key management UI; user/role management.
+- Provider CRUD UI with write-only credential entry, **test connection** (`ITestableProvider`
+  on all providers incl. Twilio/Meta account probes), per-provider rate limits
+  (`ProviderThrottle` sliding window) and retry policies (per-provider attempts + delay in
+  `FailoverSender`); last-test health shown in list + dashboard.
+- Template CRUD + live preview (AdminUI page and `POST /api/templates/preview`);
+  streamed CSV recipient import (`POST /api/campaigns/import`) with validation report
+  (accepted/invalid/duplicates + per-line errors).
+- Audit logging via `AuditSaveChangesInterceptor` (secrets redacted) + audit viewer with
+  old/new diff.
+- API rate limiting (token/campaigns/webhooks policies); Hangfire dashboard Basic auth
+  outside Development; Meta + Twilio webhook signature verification.
+- Webhook dead-letter table + 5-minute replay job (abandons after 10 attempts);
+  stuck-campaign sweep (10-minute safety-net finalizer) — adapted from the original
+  "requeue transient failures" idea since `Failed` is a terminal message state.
+- Campaign completion callbacks with SSRF guard (private/loopback/CGNAT blocked) and
+  Hangfire backoff retries (1 m→2 h).
+- Hourly `DailyStatistics` rollup; admin dashboard with stat tiles, 14-day sent/failed
+  trends, channel/provider breakdowns, provider health, recent + scheduled campaigns.
+- API key management UI (plaintext once, revoke, expiry); user management (create, roles
+  Admin/Operator/Viewer, lockout status).
 
 ## Phase 3 — Scale & breadth
 

@@ -13,6 +13,7 @@ namespace CampaignManager.Api.Controllers;
 [ApiController]
 [Route("api/campaigns")]
 [Authorize(Policy = "ApiAccess")]
+[Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("campaigns")]
 public sealed class CampaignsController : ControllerBase
 {
     private readonly ISender _sender;

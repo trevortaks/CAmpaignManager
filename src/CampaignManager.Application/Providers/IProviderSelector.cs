@@ -5,7 +5,10 @@ namespace CampaignManager.Application.Providers;
 public sealed record ResolvedProvider(
     Guid ProviderConfigurationId,
     IChannelProvider Provider,
-    ProviderCredentials Credentials);
+    ProviderCredentials Credentials,
+    int MaxRetries = 0,
+    int RetryDelaySeconds = 2,
+    int? RateLimitPerMinute = null);
 
 /// <summary>Returns the organization's enabled providers for a channel ordered by priority
 /// (lower Priority value first). Callers iterate the list to implement failover.</summary>

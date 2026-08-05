@@ -19,6 +19,15 @@ public class ProviderConfiguration
     public string? SettingsJson { get; set; }
     /// <summary>Shared secret required on delivery webhooks for this configuration.</summary>
     public string? WebhookSecret { get; set; }
+    /// <summary>Max messages per minute through this configuration; null = unlimited.</summary>
+    public int? RateLimitPerMinute { get; set; }
+    /// <summary>Immediate retries against this provider before failing over; 0 = none.</summary>
+    public int MaxRetries { get; set; }
+    /// <summary>Delay between immediate retries.</summary>
+    public int RetryDelaySeconds { get; set; } = 2;
+    public DateTime? LastTestedAtUtc { get; set; }
+    public bool? LastTestSucceeded { get; set; }
+    public string? LastTestError { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 
     public Organization? Organization { get; set; }

@@ -50,7 +50,11 @@ try
         var orgClaim = context.User.FindFirst(JwtTokenService.OrganizationClaim)?.Value;
         if (Guid.TryParse(orgClaim, out var organizationId))
         {
-            context.RequestServices.GetRequiredService<ITenantSetter>().Set(organizationId);
+            var userClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            Guid.TryParse(userClaim, out var userId);
+            context.RequestServices.GetRequiredService<ITenantSetter>().Set(
+                organizationId, userId == Guid.Empty ? null : userId,
+                context.Connection.RemoteIpAddress?.ToString());
         }
 
         await next();
@@ -60,7 +64,7 @@ try
 
     app.MapControllerRoute(
         name: "default",
-        pattern: "{controller=Campaigns}/{action=Index}/{id?}");
+        pattern: "{controller=Dashboard}/{action=Index}/{id?}");
 
     app.Run();
 }

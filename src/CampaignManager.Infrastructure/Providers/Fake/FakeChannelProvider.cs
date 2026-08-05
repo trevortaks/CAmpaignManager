@@ -7,7 +7,7 @@ namespace CampaignManager.Infrastructure.Providers.Fake;
 /// <summary>Base for dev/demo providers: logs the send, simulates latency, and fails a
 /// configurable percentage of sends (settings key "failureRatePercent") so retry/failover
 /// paths are exercisable without real provider accounts.</summary>
-public abstract class FakeChannelProvider : IChannelProvider
+public abstract class FakeChannelProvider : IChannelProvider, ITestableProvider
 {
     private readonly ILogger _logger;
 
@@ -41,6 +41,12 @@ public abstract class FakeChannelProvider : IChannelProvider
         _logger.LogInformation("[{Provider}] sent to {Address}: \"{Body}\" (providerMessageId {ProviderMessageId})",
             ProviderKey, request.RecipientAddress, Truncate(request.Body), providerMessageId);
         return SendResult.Ok(providerMessageId);
+    }
+
+    public async Task<SendResult> TestAsync(ProviderCredentials credentials, CancellationToken ct)
+    {
+        await Task.Delay(Random.Shared.Next(50, 200), ct);
+        return SendResult.Ok("test-ok");
     }
 
     private static string Truncate(string body) => body.Length <= 80 ? body : body[..77] + "...";

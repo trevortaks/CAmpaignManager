@@ -1,0 +1,188 @@
+@model CampaignManager.Application.Admin.Dashboard.DashboardData
+@{
+    ViewData["Title"] = "Dashboard";
+}
+<h1 class="h3 mb-3">Dashboard</h1>
+
+<div class="row g-3 mb-3">
+  @foreach (var (label, value) in new (string, string)[]
+  {
+      ("Campaigns today", Model.CampaignsToday.ToString("N0")),
+      ("Sent today", Model.SentToday.ToString("N0")),
+      ("Failed today", Model.FailedToday.ToString("N0")),
+      ("Pending messages", Model.PendingMessages.ToString("N0")),
+      ("Active providers", Model.ActiveProviders.ToString("N0"))
+  })
+  {
+    <div class="col">
+      <div class="card h-100">
+        <div class="card-body text-center">
+          <div class="text-muted small">@label</div>
+          <div class="fs-2 fw-semibold">@value</div>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 text-muted">Messages sent — last 14 days</h2>
+      <canvas id="sentTrend" height="180" role="img" aria-label="Line chart of messages sent per day"></canvas>
+    </div></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 text-muted">Messages failed — last 14 days</h2>
+      <canvas id="failedTrend" height="180" role="img" aria-label="Line chart of messages failed per day"></canvas>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-5">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 text-muted">By channel — last 30 days</h2>
+      <canvas id="byChannel" height="200" role="img" aria-label="Bar chart of sent and failed by channel"></canvas>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 text-muted">By provider — last 30 days</h2>
+      <canvas id="byProvider" height="200" role="img" aria-label="Bar chart of messages sent per provider"></canvas>
+    </div></div>
+  </div>
+  <div class="col-lg-3">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 text-muted">Provider health</h2>
+      <ul class="list-unstyled mb-0">
+        @foreach (var provider in Model.ProviderHealthList)
+        {
+          <li class="mb-1">
+            @if (!provider.IsEnabled)
+            { <span title="disabled">⏸</span> }
+            else if (provider.LastTestSucceeded == false)
+            { <span class="text-danger" title="last test failed">✘</span> }
+            else
+            { <span class="text-success" title="ok">✔</span> }
+            @provider.Name <span class="text-muted small">(@provider.Channel)</span>
+          </li>
+        }
+      </ul>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 text-muted">Recent campaigns</h2>
+      <table class="table table-sm mb-0">
+        <tbody>
+        @foreach (var campaign in Model.RecentCampaigns)
+        {
+          <tr>
+            <td><a asp-controller="Campaigns" asp-action="Details" asp-route-id="@campaign.Id">@campaign.Name</a></td>
+            <td>@campaign.Channel</td><td>@campaign.Status</td>
+            <td class="text-end">@campaign.Total.ToString("N0")</td>
+            <td class="text-muted">@campaign.WhenUtc?.ToString("MM-dd HH:mm")</td>
+          </tr>
+        }
+        </tbody>
+      </table>
+    </div></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 text-muted">Scheduled campaigns</h2>
+      <table class="table table-sm mb-0">
+        <tbody>
+        @foreach (var campaign in Model.ScheduledCampaigns)
+        {
+          <tr>
+            <td><a asp-controller="Campaigns" asp-action="Details" asp-route-id="@campaign.Id">@campaign.Name</a></td>
+            <td>@campaign.Channel</td>
+            <td class="text-end">@campaign.Total.ToString("N0")</td>
+            <td class="text-muted">@campaign.WhenUtc?.ToString("yyyy-MM-dd HH:mm") UTC</td>
+          </tr>
+        }
+        @if (Model.ScheduledCampaigns.Count == 0)
+        {
+          <tr><td class="text-muted">None scheduled.</td></tr>
+        }
+        </tbody>
+      </table>
+    </div></div>
+  </div>
+</div>
+
+@section Scripts {
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script>
+    // Colors from the validated reference palette; single-series charts are titled, so no legend.
+    const surface = '#fcfcfb', blue = '#2a78d6', critical = '#d03b3b',
+          categorical = ['#2a78d6', '#eb6834', '#1baf7a'];
+    const grid = { color: 'rgba(0,0,0,0.07)' };
+
+    const sentTrend = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.SentTrend.Select(p => new { date = p.Date.ToString("MM-dd"), count = p.Count })));
+    const failedTrend = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.FailedTrend.Select(p => new { date = p.Date.ToString("MM-dd"), count = p.Count })));
+    const byChannel = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.ByChannel.Select(c => new { channel = c.Channel, sent = c.Sent, failed = c.Failed })));
+    const byProvider = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.ByProvider.Select(p => new { provider = p.Provider, sent = p.Sent })));
+
+    function lineChart(id, points, color) {
+      new Chart(document.getElementById(id), {
+        type: 'line',
+        data: {
+          labels: points.map(p => p.date),
+          datasets: [{ data: points.map(p => p.count), borderColor: color, borderWidth: 2,
+                       pointRadius: 0, pointHitRadius: 12, tension: 0.2, fill: false }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid } },
+          maintainAspectRatio: false
+        }
+      });
+    }
+    lineChart('sentTrend', sentTrend, blue);
+    lineChart('failedTrend', failedTrend, critical);
+
+    new Chart(document.getElementById('byChannel'), {
+      type: 'bar',
+      data: {
+        labels: byChannel.map(c => c.channel),
+        datasets: [
+          { label: 'Sent', data: byChannel.map(c => c.sent), backgroundColor: blue,
+            borderColor: surface, borderWidth: 2, borderRadius: 4 },
+          { label: 'Failed', data: byChannel.map(c => c.failed), backgroundColor: critical,
+            borderColor: surface, borderWidth: 2, borderRadius: 4 }
+        ]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom' } },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid } },
+        maintainAspectRatio: false
+      }
+    });
+
+    new Chart(document.getElementById('byProvider'), {
+      type: 'bar',
+      data: {
+        labels: byProvider.map(p => p.provider),
+        datasets: [{ data: byProvider.map(p => p.sent), backgroundColor: blue,
+                     borderColor: surface, borderWidth: 2, borderRadius: 4 }]
+      },
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, grid }, y: { grid: { display: false } } },
+        maintainAspectRatio: false
+      }
+    });
+  </script>
+}

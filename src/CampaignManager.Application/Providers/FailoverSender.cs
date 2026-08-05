@@ -2,14 +2,18 @@ using Microsoft.Extensions.Logging;
 
 namespace CampaignManager.Application.Providers;
 
-/// <summary>Attempts a send across an ordered provider list: transient provider failures
-/// fall through to the next provider; rejections and successes stop immediately.</summary>
+/// <summary>Attempts a send across an ordered provider list. Each provider gets
+/// 1 + MaxRetries attempts (transient errors only, spaced by RetryDelaySeconds) and is
+/// throttled to its configured rate limit; transient exhaustion falls through to the next
+/// provider; rejections and successes stop immediately.</summary>
 public sealed class FailoverSender
 {
+    private readonly IProviderThrottle _throttle;
     private readonly ILogger<FailoverSender> _logger;
 
-    public FailoverSender(ILogger<FailoverSender> logger)
+    public FailoverSender(IProviderThrottle throttle, ILogger<FailoverSender> logger)
     {
+        _throttle = throttle;
         _logger = logger;
     }
 
@@ -28,30 +32,46 @@ public sealed class FailoverSender
 
         foreach (var resolved in providers)
         {
-            ct.ThrowIfCancellationRequested();
             lastConfigId = resolved.ProviderConfigurationId;
-            try
-            {
-                lastResult = await resolved.Provider.SendAsync(request, resolved.Credentials, ct);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Provider {ProviderKey} threw while sending message {MessagePublicId}",
-                    resolved.Provider.ProviderKey, request.MessagePublicId);
-                lastResult = SendResult.TransientFailure("provider_exception", ex.Message);
-            }
+            var attempts = 1 + Math.Max(0, resolved.MaxRetries);
 
-            if (lastResult.Success || !lastResult.IsTransient)
+            for (var attempt = 1; attempt <= attempts; attempt++)
             {
-                return (lastResult, lastConfigId);
+                ct.ThrowIfCancellationRequested();
+                await _throttle.WaitAsync(resolved.ProviderConfigurationId, resolved.RateLimitPerMinute, ct);
+
+                try
+                {
+                    lastResult = await resolved.Provider.SendAsync(request, resolved.Credentials, ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Provider {ProviderKey} threw while sending message {MessagePublicId}",
+                        resolved.Provider.ProviderKey, request.MessagePublicId);
+                    lastResult = SendResult.TransientFailure("provider_exception", ex.Message);
+                }
+
+                if (lastResult.Success || !lastResult.IsTransient)
+                {
+                    return (lastResult, lastConfigId);
+                }
+
+                if (attempt < attempts)
+                {
+                    _logger.LogWarning(
+                        "Provider {ProviderKey} transient failure ({ErrorCode}); retry {Attempt}/{Max} in {Delay}s",
+                        resolved.Provider.ProviderKey, lastResult.ErrorCode, attempt, attempts - 1,
+                        resolved.RetryDelaySeconds);
+                    await Task.Delay(TimeSpan.FromSeconds(resolved.RetryDelaySeconds), ct);
+                }
             }
 
             _logger.LogWarning(
-                "Provider {ProviderKey} transient failure ({ErrorCode}) for message {MessagePublicId}; failing over",
+                "Provider {ProviderKey} exhausted ({ErrorCode}) for message {MessagePublicId}; failing over",
                 resolved.Provider.ProviderKey, lastResult.ErrorCode, request.MessagePublicId);
         }
 

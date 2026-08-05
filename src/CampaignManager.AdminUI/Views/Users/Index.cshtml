@@ -1,0 +1,48 @@
+@model IReadOnlyList<CampaignManager.AdminUI.Controllers.UsersController.UserRow>
+@{
+    ViewData["Title"] = "Users";
+    var roles = new[] { "Admin", "Operator", "Viewer" };
+}
+<h1 class="h3 mb-3">Users</h1>
+
+<form method="post" asp-action="Create" class="row g-2 mb-4">
+  @Html.AntiForgeryToken()
+  <div class="col-auto"><input class="form-control" type="email" name="email" placeholder="email@example.com" required /></div>
+  <div class="col-auto"><input class="form-control" name="displayName" placeholder="Display name" required /></div>
+  <div class="col-auto"><input class="form-control" type="password" name="password" placeholder="Password (10+ chars)" required autocomplete="new-password" /></div>
+  <div class="col-auto">
+    <select class="form-select" name="role">
+      @foreach (var role in roles) { <option>@role</option> }
+    </select>
+  </div>
+  <div class="col-auto"><button class="btn btn-primary" type="submit">Create user</button></div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>Email</th><th>Name</th><th>Roles</th><th>Status</th><th class="text-end">Set role</th></tr></thead>
+    <tbody>
+      @foreach (var user in Model)
+      {
+        <tr>
+          <td>@user.Email</td>
+          <td>@user.DisplayName</td>
+          <td>@string.Join(", ", user.Roles)</td>
+          <td>@(user.LockedOut ? "Locked out" : "Active")</td>
+          <td class="text-end">
+            <form method="post" asp-action="SetRole" asp-route-id="@user.Id" class="d-inline-flex gap-1">
+              @Html.AntiForgeryToken()
+              <select class="form-select form-select-sm" name="role" style="width:auto">
+                @foreach (var role in roles)
+                {
+                  <option selected="@user.Roles.Contains(role)">@role</option>
+                }
+              </select>
+              <button class="btn btn-sm btn-outline-secondary" type="submit">Apply</button>
+            </form>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

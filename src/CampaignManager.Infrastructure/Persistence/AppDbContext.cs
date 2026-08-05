@@ -26,6 +26,8 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<WebhookDeadLetter> WebhookDeadLetters => Set<WebhookDeadLetter>();
+    public DbSet<DailyStatistic> DailyStatistics => Set<DailyStatistic>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -115,6 +117,22 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
             e.Property(x => x.KeyPrefix).HasMaxLength(12);
             e.HasIndex(x => x.KeyPrefix);
             e.HasOne(x => x.Organization).WithMany().HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<WebhookDeadLetter>(e =>
+        {
+            e.Property(x => x.ProviderKey).HasMaxLength(50);
+            e.Property(x => x.ProviderMessageId).HasMaxLength(128);
+            e.Property(x => x.ReportedStatus).HasMaxLength(20);
+            e.Property(x => x.Detail).HasMaxLength(1024);
+            e.HasIndex(x => x.ReceivedAtUtc)
+                .HasFilter("[ResolvedAtUtc] IS NULL AND [AbandonedAtUtc] IS NULL");
+        });
+
+        builder.Entity<DailyStatistic>(e =>
+        {
+            e.HasIndex(x => new { x.OrganizationId, x.Date, x.Channel, x.ProviderConfigurationId })
+                .IsUnique();
         });
 
         builder.Entity<AuditLog>(e =>
