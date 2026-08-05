@@ -20,6 +20,7 @@ public interface IAppDbContext
     DbSet<CampaignSeriesRecipient> CampaignSeriesRecipients { get; }
     DbSet<NotificationLog> NotificationLogs { get; }
     DbSet<NotificationSettings> NotificationSettings { get; }
+    DbSet<Suppression> Suppressions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

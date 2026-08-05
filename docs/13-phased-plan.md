@@ -76,9 +76,24 @@ tests, smoke script, architecture docs.
 
 ## Phase 4 — Enterprise hardening
 
-- External IdP (OIDC) option; fine-grained permissions.
+- **Suppression list + right-to-erasure** ✅ (delivered) — the only two Phase 4 items that are a
+  real obligation today rather than a scale-triggered decision. `Suppression` (address + optional
+  channel + reason) is checked once per dispatch batch in `CampaignProcessingJob.SendBatchAsync`
+  (not per message) and rejects any match before it reaches a provider, regardless of the
+  provider's own consent handling. `POST /api/compliance/erase` redacts an address's
+  `CampaignRecipient`/`CampaignSeriesRecipient` rows tenant-wide (`Message` carries no PII of its
+  own — just a foreign key + status — so nothing else needs touching); it does not remove any
+  matching suppression, since an erased address must still never be re-contacted. Admin CRUD UI
+  intentionally **not** built — these are ops/API-key actions, not something that needed a
+  dashboard page for this pass.
+- External IdP (OIDC) option; fine-grained permissions — **deferred**, no concrete tenant/provider
+  named yet to integrate against.
 - Broker-based dispatch (RabbitMQ/ASB) if Hangfire storage becomes the bottleneck; SMPP support
-  as part of the same session-oriented rework.
-- Read replicas / reporting store; multi-region strategy; attachment storage (blob/S3).
-- Compliance: PII retention policies, right-to-erasure jobs, per-tenant encryption keys.
-- Apply `scripts/partition-messages.sql` once volume warrants it; wire retention/archive jobs.
+  as part of the same session-oriented rework — **deferred**, no bottleneck observed yet.
+- Read replicas / reporting store; multi-region strategy; attachment storage (blob/S3) —
+  **deferred**; these are deployment/topology decisions for a real environment, not app code to
+  write speculatively in this repo.
+- Per-tenant encryption keys; scheduled PII retention/purge job — **deferred**, no retention
+  duration or KMS target has been specified yet.
+- Apply `scripts/partition-messages.sql` once volume warrants it; wire retention/archive jobs —
+  **deferred**, per its own original "once volume warrants" condition.

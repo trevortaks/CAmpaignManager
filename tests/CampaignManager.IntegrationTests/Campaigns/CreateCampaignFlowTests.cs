@@ -14,6 +14,7 @@ namespace CampaignManager.IntegrationTests.Campaigns;
 
 /// <summary>End-to-end API test against a real SQL Server (the podman dev container) using a
 /// throwaway database per run so the dev database and Hangfire schema are untouched.</summary>
+[Collection("ApiFactory")]
 public sealed class CreateCampaignFlowTests : IClassFixture<ApiFactory>
 {
     private readonly ApiFactory _factory;

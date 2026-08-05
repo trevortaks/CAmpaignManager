@@ -168,9 +168,28 @@ public sealed class CampaignProcessingJob : ICampaignProcessingJob
             .OrderBy(m => m.Id)
             .ToListAsync();
 
+        // One suppression query per batch (not per message): opted-out/complained addresses
+        // must never be sent to again regardless of provider-level consent handling.
+        var batchAddresses = messages.Select(m => m.Recipient!.Address.Trim().ToLowerInvariant()).Distinct().ToList();
+        var suppressed = (await _db.Suppressions.AsNoTracking()
+            .Where(s => batchAddresses.Contains(s.Address) && (s.Channel == null || s.Channel == campaign.Channel))
+            .Select(s => s.Address)
+            .ToListAsync()).ToHashSet();
+
         var processedSinceCheck = 0;
         foreach (var message in messages)
         {
+            if (suppressed.Contains(message.Recipient!.Address.Trim().ToLowerInvariant()))
+            {
+                message.LastError = "Suppressed: recipient opted out";
+                message.TransitionTo(MessageStatus.Rejected, DateTime.UtcNow);
+                _db.DeliveryEvents.Add(new DeliveryEvent
+                {
+                    MessageId = message.Id, Status = message.Status, Detail = message.LastError, OccurredAtUtc = DateTime.UtcNow
+                });
+                continue;
+            }
+
             var personalization = Deserialize(message.Recipient?.PersonalizationJson);
             var body = _templateRenderer.Render(bodyTemplate, personalization);
             var subject = subjectTemplate is null ? null : _templateRenderer.Render(subjectTemplate, personalization);

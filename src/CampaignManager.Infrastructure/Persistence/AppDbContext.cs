@@ -32,6 +32,7 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
     public DbSet<CampaignSeriesRecipient> CampaignSeriesRecipients => Set<CampaignSeriesRecipient>();
     public DbSet<NotificationLog> NotificationLogs => Set<NotificationLog>();
     public DbSet<NotificationSettings> NotificationSettings => Set<NotificationSettings>();
+    public DbSet<Suppression> Suppressions => Set<Suppression>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -185,6 +186,15 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>
             e.HasKey(x => x.OrganizationId);
             e.Property(x => x.RecipientEmail).HasMaxLength(320);
             e.HasOne(x => x.Organization).WithOne().HasForeignKey<NotificationSettings>(x => x.OrganizationId);
+        });
+
+        builder.Entity<Suppression>(e =>
+        {
+            e.Property(x => x.Address).HasMaxLength(320);
+            e.Property(x => x.Reason).HasMaxLength(200);
+            e.HasIndex(x => new { x.OrganizationId, x.Address, x.Channel }).IsUnique();
+            e.HasQueryFilter(x =>
+                _currentTenant.OrganizationId == null || x.OrganizationId == _currentTenant.OrganizationId);
         });
     }
 }
