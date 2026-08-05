@@ -1,0 +1,79 @@
+@model CampaignManager.Contracts.Common.PagedResult<CampaignManager.Contracts.Campaigns.CampaignSummaryResponse>
+@{
+    ViewData["Title"] = "Campaigns";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Campaigns</h1>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-auto">
+    <input class="form-control" type="text" name="search" placeholder="Name or tracking id"
+           value="@ViewData["Search"]" />
+  </div>
+  <div class="col-auto">
+    <select class="form-select" name="status">
+      <option value="">All statuses</option>
+      @foreach (var status in new[] { "Scheduled", "Queued", "Processing", "Completed", "CompletedWithErrors", "Failed", "Cancelled" })
+      {
+        <option value="@status" selected="@(status == (string?)ViewData["Status"])">@status</option>
+      }
+    </select>
+  </div>
+  <div class="col-auto">
+    <select class="form-select" name="channel">
+      <option value="">All channels</option>
+      @foreach (var channel in new[] { "Sms", "Email", "WhatsApp" })
+      {
+        <option value="@channel" selected="@(channel == (string?)ViewData["Channel"])">@channel</option>
+      }
+    </select>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-outline-primary" type="submit">Filter</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead>
+      <tr>
+        <th>Name</th><th>Tracking</th><th>Channel</th><th>Status</th>
+        <th class="text-end">Recipients</th><th>Created (UTC)</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (var campaign in Model.Items)
+      {
+        <tr>
+          <td><a asp-action="Details" asp-route-id="@campaign.CampaignId">@campaign.Name</a></td>
+          <td><code>@campaign.TrackingId</code></td>
+          <td>@campaign.Channel</td>
+          <td>@campaign.Status</td>
+          <td class="text-end">@campaign.TotalRecipients.ToString("N0")</td>
+          <td>@campaign.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+        </tr>
+      }
+      @if (Model.Items.Count == 0)
+      {
+        <tr><td colspan="6" class="text-muted">No campaigns found.</td></tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+  <nav>
+    <ul class="pagination">
+      @for (var pageNumber = 1; pageNumber <= Model.TotalPages; pageNumber++)
+      {
+        <li class="page-item @(pageNumber == Model.Page ? "active" : "")">
+          <a class="page-link" asp-action="Index" asp-route-page="@pageNumber"
+             asp-route-search="@ViewData["Search"]" asp-route-status="@ViewData["Status"]"
+             asp-route-channel="@ViewData["Channel"]">@pageNumber</a>
+        </li>
+      }
+    </ul>
+  </nav>
+}

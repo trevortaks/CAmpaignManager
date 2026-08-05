@@ -1,0 +1,113 @@
+@model CampaignManager.Contracts.Campaigns.CampaignStatusResponse
+@{
+    ViewData["Title"] = Model.Name;
+    var stats = Model.Statistics;
+    // Status colors from the validated reference palette: identity is carried by the
+    // legend and the counts table, never color alone.
+    var segments = new (string Label, int Count, string Color)[]
+    {
+        ("Queued", stats.Queued, "#9a9992"),
+        ("Processing", stats.Processing, "#2a78d6"),
+        ("Sent", stats.Sent, "#4a3aa7"),
+        ("Delivered", stats.Delivered, "#0ca30c"),
+        ("Read", stats.Read, "#008300"),
+        ("Expired", stats.Expired, "#fab219"),
+        ("Rejected", stats.Rejected, "#ec835a"),
+        ("Failed", stats.Failed, "#d03b3b")
+    };
+    var visible = segments.Where(s => s.Count > 0).ToArray();
+}
+
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a asp-action="Index">Campaigns</a></li>
+    <li class="breadcrumb-item active">@Model.Name</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">@Model.Name</h1>
+  <span class="badge text-bg-secondary fs-6">@Model.Status</span>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted">Message status</h2>
+        <canvas id="statusChart" height="220" role="img"
+                aria-label="Donut chart of message delivery statuses"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h6 text-muted">Details</h2>
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Tracking id</dt><dd class="col-sm-8"><code>@Model.TrackingId</code></dd>
+          <dt class="col-sm-4">Channel</dt><dd class="col-sm-8">@Model.Channel</dd>
+          <dt class="col-sm-4">Scheduled (UTC)</dt><dd class="col-sm-8">@(Model.ScheduledAtUtc?.ToString("u") ?? "—")</dd>
+          <dt class="col-sm-4">Started (UTC)</dt><dd class="col-sm-8">@(Model.StartedAtUtc?.ToString("u") ?? "—")</dd>
+          <dt class="col-sm-4">Completed (UTC)</dt><dd class="col-sm-8">@(Model.CompletedAtUtc?.ToString("u") ?? "—")</dd>
+        </dl>
+        <h2 class="h6 text-muted mt-3">Counts</h2>
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><th>Total</th><td class="text-end">@stats.Total.ToString("N0")</td></tr>
+            @foreach (var segment in segments)
+            {
+              <tr>
+                <th><span class="me-1" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:@segment.Color"></span>@segment.Label</th>
+                <td class="text-end">@segment.Count.ToString("N0")</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@if (Model.FailureReasons.Count > 0)
+{
+  <div class="card mt-3">
+    <div class="card-body">
+      <h2 class="h6 text-muted">Top failure reasons</h2>
+      <table class="table table-sm mb-0">
+        <tbody>
+          @foreach (var reason in Model.FailureReasons)
+          {
+            <tr><td><code>@reason.Error</code></td><td class="text-end">@reason.Count</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+@section Scripts {
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script>
+    const segments = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        visible.Select(s => new { label = s.Label, count = s.Count, color = s.Color })));
+    new Chart(document.getElementById('statusChart'), {
+      type: 'doughnut',
+      data: {
+        labels: segments.map(s => s.label),
+        datasets: [{
+          data: segments.map(s => s.count),
+          backgroundColor: segments.map(s => s.color),
+          borderColor: '#fcfcfb',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'right' }
+        },
+        maintainAspectRatio: false
+      }
+    });
+  </script>
+}

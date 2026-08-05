@@ -1,0 +1,26 @@
+@{
+    ViewData["Title"] = "Sign in";
+    Layout = "_Layout";
+}
+<div class="row justify-content-center mt-5">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <h1 class="h4 mb-3">Campaign Manager</h1>
+        <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+        <form method="post" asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]">
+          <div class="mb-3">
+            <label class="form-label" for="email">Email</label>
+            <input class="form-control" type="email" id="email" name="email" required
+                   value="admin@demo.local" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <input class="form-control" type="password" id="password" name="password" required />
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Sign in</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
