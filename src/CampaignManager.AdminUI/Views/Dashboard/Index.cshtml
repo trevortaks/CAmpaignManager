@@ -5,20 +5,25 @@
 <h1 class="h3 mb-3">Dashboard</h1>
 
 <div class="row g-3 mb-3">
-  @foreach (var (label, value) in new (string, string)[]
+  @foreach (var (label, value, colorClass, icon) in new (string, string, string, string)[]
   {
-      ("Campaigns today", Model.CampaignsToday.ToString("N0")),
-      ("Sent today", Model.SentToday.ToString("N0")),
-      ("Failed today", Model.FailedToday.ToString("N0")),
-      ("Pending messages", Model.PendingMessages.ToString("N0")),
-      ("Active providers", Model.ActiveProviders.ToString("N0"))
+      ("Campaigns today", Model.CampaignsToday.ToString("N0"), "text-bg-primary", "icon-campaigns"),
+      ("Sent today", Model.SentToday.ToString("N0"), "text-bg-success", "icon-check-circle"),
+      ("Failed today", Model.FailedToday.ToString("N0"), "text-bg-danger", "icon-alert"),
+      ("Pending messages", Model.PendingMessages.ToString("N0"), "text-bg-warning", "icon-clock"),
+      ("Active providers", Model.ActiveProviders.ToString("N0"), "text-bg-info", "icon-server")
   })
   {
     <div class="col">
       <div class="card h-100">
-        <div class="card-body stat-tile">
-          <div class="stat-tile-label">@label</div>
-          <div class="stat-tile-value">@value</div>
+        <div class="card-body info-box">
+          <div class="info-box-icon @colorClass">
+            <svg class="icon" aria-hidden="true"><use href="@Url.Content("~/icons/sprite.svg")#@icon"></use></svg>
+          </div>
+          <div>
+            <div class="info-box-label">@label</div>
+            <div class="info-box-value">@value</div>
+          </div>
         </div>
       </div>
     </div>
@@ -27,39 +32,83 @@
 
 <div class="row g-3 mb-3">
   <div class="col-lg-6">
-    <div class="card h-100"><div class="card-body">
-      <h2 class="h6 text-muted">Messages sent — last 14 days</h2>
-      <div class="chart-container" style="height:180px">
-        <canvas id="sentTrend" role="img" aria-label="Line chart of messages sent per day"></canvas>
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">Messages sent — last 14 days</h2>
+        <div class="card-tools">
+          <button type="button" class="btn-tool" data-bs-toggle="collapse" data-bs-target="#chart-sentTrend" aria-label="Toggle chart">
+            <svg class="icon" aria-hidden="true"><use href="@Url.Content("~/icons/sprite.svg")#icon-minimize"></use></svg>
+          </button>
+        </div>
       </div>
-    </div></div>
+      <div class="collapse show" id="chart-sentTrend">
+        <div class="card-body">
+          <div class="chart-container" style="height:180px">
+            <canvas id="sentTrend" role="img" aria-label="Line chart of messages sent per day"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="col-lg-6">
-    <div class="card h-100"><div class="card-body">
-      <h2 class="h6 text-muted">Messages failed — last 14 days</h2>
-      <div class="chart-container" style="height:180px">
-        <canvas id="failedTrend" role="img" aria-label="Line chart of messages failed per day"></canvas>
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">Messages failed — last 14 days</h2>
+        <div class="card-tools">
+          <button type="button" class="btn-tool" data-bs-toggle="collapse" data-bs-target="#chart-failedTrend" aria-label="Toggle chart">
+            <svg class="icon" aria-hidden="true"><use href="@Url.Content("~/icons/sprite.svg")#icon-minimize"></use></svg>
+          </button>
+        </div>
       </div>
-    </div></div>
+      <div class="collapse show" id="chart-failedTrend">
+        <div class="card-body">
+          <div class="chart-container" style="height:180px">
+            <canvas id="failedTrend" role="img" aria-label="Line chart of messages failed per day"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
 <div class="row g-3 mb-3">
   <div class="col-lg-5">
-    <div class="card h-100"><div class="card-body">
-      <h2 class="h6 text-muted">By channel — last 30 days</h2>
-      <div class="chart-container" style="height:200px">
-        <canvas id="byChannel" role="img" aria-label="Bar chart of sent and failed by channel"></canvas>
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">By channel — last 30 days</h2>
+        <div class="card-tools">
+          <button type="button" class="btn-tool" data-bs-toggle="collapse" data-bs-target="#chart-byChannel" aria-label="Toggle chart">
+            <svg class="icon" aria-hidden="true"><use href="@Url.Content("~/icons/sprite.svg")#icon-minimize"></use></svg>
+          </button>
+        </div>
       </div>
-    </div></div>
+      <div class="collapse show" id="chart-byChannel">
+        <div class="card-body">
+          <div class="chart-container" style="height:200px">
+            <canvas id="byChannel" role="img" aria-label="Bar chart of sent and failed by channel"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="col-lg-4">
-    <div class="card h-100"><div class="card-body">
-      <h2 class="h6 text-muted">By provider — last 30 days</h2>
-      <div class="chart-container" style="height:200px">
-        <canvas id="byProvider" role="img" aria-label="Bar chart of messages sent per provider"></canvas>
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">By provider — last 30 days</h2>
+        <div class="card-tools">
+          <button type="button" class="btn-tool" data-bs-toggle="collapse" data-bs-target="#chart-byProvider" aria-label="Toggle chart">
+            <svg class="icon" aria-hidden="true"><use href="@Url.Content("~/icons/sprite.svg")#icon-minimize"></use></svg>
+          </button>
+        </div>
       </div>
-    </div></div>
+      <div class="collapse show" id="chart-byProvider">
+        <div class="card-body">
+          <div class="chart-container" style="height:200px">
+            <canvas id="byProvider" role="img" aria-label="Bar chart of messages sent per provider"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="col-lg-3">
     <div class="card h-100"><div class="card-body">

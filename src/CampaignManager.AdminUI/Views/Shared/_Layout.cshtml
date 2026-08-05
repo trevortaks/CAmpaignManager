@@ -15,9 +15,9 @@
         // will show on every hard refresh when the stored preference is dark.
         (function () {
             var stored = localStorage.getItem('theme');
-            if (stored === 'dark' || stored === 'light') {
-                document.documentElement.setAttribute('data-theme', stored);
-            }
+            // Bootstrap's own attribute — its compiled dark-mode CSS is keyed off this,
+            // not a custom attribute, so setting it here also drives Bootstrap's native theming.
+            document.documentElement.setAttribute('data-bs-theme', stored === 'dark' ? 'dark' : 'light');
         })();
     </script>
 </head>

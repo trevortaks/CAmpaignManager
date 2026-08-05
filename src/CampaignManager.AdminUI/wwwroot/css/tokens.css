@@ -1,61 +1,67 @@
 /*
  * Design tokens — custom properties only, no component rules here.
- * Values are taken verbatim from the dataviz skill's validated reference palette
- * (references/palette.md), the same source the existing Chart.js views already draw
- * their colors from. Light = :root; dark = [data-theme="dark"], toggled explicitly by
- * theme-toggle.js (not prefers-color-scheme) and persisted to localStorage.
+ * Colors are taken directly from Bootstrap 5.3's native color-mode system (measured against
+ * https://adminlte.io/themes/v4/index2.html, which itself just toggles Bootstrap's own
+ * [data-bs-theme] attribute plus stock semantic colors — no custom AdminLTE hues). Using the
+ * same [data-bs-theme] attribute Bootstrap expects means Bootstrap's own compiled dark-mode
+ * CSS (already in bootstrap.min.css) re-themes cards/tables/badges/forms/pagination natively;
+ * theme.css only needs to add the handful of structural overrides AdminLTE layers on top
+ * (body uses tertiary-bg, not body-bg; sidebar is always dark — see admin.css).
+ * Toggled explicitly by theme-toggle.js (not prefers-color-scheme) and persisted to localStorage.
  */
 
-:root {
+:root,
+[data-bs-theme="light"] {
   color-scheme: light;
 
-  /* Surfaces (palette.md "Chart chrome & ink") */
-  --surface-canvas: #f9f9f7; /* page plane */
-  --surface-1: #fcfcfb;      /* cards, sidebar, topbar, chart surface */
-  --surface-2: #f2f1ee;      /* nested surface: table stripe/hover, hairline fill */
+  /* Surfaces — stock Bootstrap light-mode values */
+  --surface-canvas: #f8f9fa; /* body background: --bs-tertiary-bg */
+  --surface-1: #ffffff;      /* card background: --bs-body-bg */
+  --surface-2: #e9ecef;      /* nested surface: --bs-secondary-bg */
 
-  /* Text */
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
+  /* Text — stock Bootstrap light-mode values */
+  --text-primary: #212529;
+  --text-secondary: rgba(33, 37, 41, .75);
+  --text-muted: #6c757d;
 
   /* Borders */
-  --border-hairline: #e1e0d9;
-  --border-strong: #c3c2b7;
+  --border-hairline: #dee2e6;
+  --border-strong: #ced4da;
 
-  /* Brand / accent (categorical slot 1 — blue) */
-  --accent: #2a78d6;
-  --accent-hover: #1c5cab;
+  /* Brand / accent — Bootstrap primary */
+  --accent: #0d6efd;
+  --accent-hover: #0b5ed7;
   --accent-contrast: #ffffff;
 
-  /* Status — fixed, never themed between light/dark per palette.md */
-  --status-good: #0ca30c;
-  --status-warning: #fab219;
-  --status-serious: #ec835a;
-  --status-critical: #d03b3b;
+  /* Status — Bootstrap's stock semantic colors, fixed across both themes */
+  --status-good: #198754;
+  --status-warning: #ffc107;
+  --status-serious: #fd7e14;
+  --status-critical: #dc3545;
+  --status-info: #0dcaf0;
 
   /* Chart chrome */
-  --chart-surface: #fcfcfb;
-  --chart-grid: #e1e0d9;
-  --chart-axis: #c3c2b7;
-  --chart-ink-primary: #0b0b0b;
-  --chart-ink-secondary: #52514e;
-  --chart-ink-muted: #898781;
+  --chart-surface: #ffffff;
+  --chart-grid: #dee2e6;
+  --chart-axis: #ced4da;
+  --chart-ink-primary: #212529;
+  --chart-ink-secondary: rgba(33, 37, 41, .75);
+  --chart-ink-muted: #6c757d;
 
-  /* Chart categorical series (slots 1-3 — the only ones validated all-pairs) */
-  --chart-series-1: #2a78d6; /* blue */
-  --chart-series-2: #eb6834; /* orange */
-  --chart-series-3: #1baf7a; /* aqua */
+  /* Chart categorical series — Bootstrap primary/info/success */
+  --chart-series-1: #0d6efd; /* primary */
+  --chart-series-2: #0dcaf0; /* info */
+  --chart-series-3: #198754; /* success */
 
   /* Message-status segment colors (Campaigns/Details doughnut) — light */
-  --status-queued: #9a9992;
-  --status-processing: #2a78d6;
-  --status-sent: #4a3aa7;
-  --status-delivered: #0ca30c;
-  --status-read: #008300;
-  --status-expired: #fab219;
-  --status-rejected: #ec835a;
-  --status-failed: #d03b3b;
+  --status-queued: #6c757d;
+  --status-processing: #0d6efd;
+  --status-sent: #6f42c1;
+  --status-delivered: #198754;
+  --status-read: #20c997;
+  --status-expired: #ffc107;
+  --status-rejected: #fd7e14;
+  --status-failed: #dc3545;
 
   /* Spacing (rem, matches Bootstrap's own spacer scale so utility classes keep working) */
   --space-1: .25rem;
@@ -70,55 +76,72 @@
   --radius-lg: .75rem;
 
   /* Shadow */
-  --shadow-sm: 0 1px 2px rgba(11, 11, 11, .06);
-  --shadow-md: 0 2px 8px rgba(11, 11, 11, .08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, .08);
 
   /* Shell dimensions */
   --sidebar-width: 15.5rem;
   --topbar-height: 3.5rem;
+
+  /* Sidebar is always dark regardless of theme (classic AdminLTE convention) */
+  --sidebar-bg: #343a40;
+  --sidebar-text: #dee2e6;
+  --sidebar-text-muted: #adb5bd;
+  --sidebar-hover-bg: rgba(255, 255, 255, .1);
+  --sidebar-active-bg: rgba(255, 255, 255, .1);
+  --sidebar-border: rgba(255, 255, 255, .1);
 }
 
-[data-theme="dark"] {
+[data-bs-theme="dark"] {
   color-scheme: dark;
 
-  --surface-canvas: #0d0d0d;
-  --surface-1: #1a1a19;
-  --surface-2: #232322;
+  /* Surfaces — stock Bootstrap dark-mode values, measured from AdminLTE's dark dashboard */
+  --surface-canvas: #2b3035; /* body background: --bs-tertiary-bg dark */
+  --surface-1: #212529;      /* card background: --bs-body-bg dark */
+  --surface-2: #343a40;      /* nested surface: --bs-secondary-bg dark */
 
-  --text-primary: #ffffff;
-  --text-secondary: #c3c2b7;
-  --text-muted: #898781;
+  --text-primary: #dee2e6;
+  --text-secondary: rgba(222, 226, 230, .75);
+  --text-muted: #adb5bd;
 
-  --border-hairline: #2c2c2a;
-  --border-strong: #383835;
+  --border-hairline: #495057;
+  --border-strong: #6c757d;
 
-  --accent: #3987e5;
-  --accent-hover: #5598e7;
-  --accent-contrast: #0d0d0d;
+  --accent: #0d6efd;
+  --accent-hover: #3d8bfd;
+  --accent-contrast: #ffffff;
 
-  /* Status colors stay identical — palette.md: "fixed, never themed" */
+  /* Status colors stay identical — Bootstrap semantic colors are not remapped per theme */
 
-  --chart-surface: #1a1a19;
-  --chart-grid: #2c2c2a;
-  --chart-axis: #383835;
-  --chart-ink-primary: #ffffff;
-  --chart-ink-secondary: #c3c2b7;
-  --chart-ink-muted: #898781;
+  --chart-surface: #212529;
+  --chart-grid: #495057;
+  --chart-axis: #6c757d;
+  --chart-ink-primary: #dee2e6;
+  --chart-ink-secondary: rgba(222, 226, 230, .75);
+  --chart-ink-muted: #adb5bd;
 
-  --chart-series-1: #3987e5;
-  --chart-series-2: #d95926;
-  --chart-series-3: #199e70;
+  --chart-series-1: #0d6efd;
+  --chart-series-2: #0dcaf0;
+  --chart-series-3: #198754;
 
-  /* Message-status segment colors — dark (categorical/status dark columns, same hue family) */
-  --status-queued: #b7b6ae;
-  --status-processing: #3987e5;
-  --status-sent: #9085e9;
-  --status-delivered: #0ca30c;
-  --status-read: #0ca30c;
-  --status-expired: #fab219;
-  --status-rejected: #ec835a;
-  --status-failed: #e66767;
+  /* Message-status segment colors — dark (same hues; Bootstrap semantic colors don't shift) */
+  --status-queued: #adb5bd;
+  --status-processing: #0d6efd;
+  --status-sent: #9370db;
+  --status-delivered: #198754;
+  --status-read: #20c997;
+  --status-expired: #ffc107;
+  --status-rejected: #fd7e14;
+  --status-failed: #dc3545;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, .5);
+
+  /* Sidebar tokens repeated (unchanged) so component CSS need not special-case dark mode */
+  --sidebar-bg: #343a40;
+  --sidebar-text: #dee2e6;
+  --sidebar-text-muted: #adb5bd;
+  --sidebar-hover-bg: rgba(255, 255, 255, .1);
+  --sidebar-active-bg: rgba(255, 255, 255, .1);
+  --sidebar-border: rgba(255, 255, 255, .1);
 }

@@ -1,129 +1,23 @@
 /*
- * Re-themes vendored Bootstrap 5.3.3 by overriding its own --bs-* custom properties.
- * Bootstrap's compiled components (card, table, badge, button, form-control, pagination,
- * dropdown, offcanvas, alert...) already read from these variables, so this file is what
- * makes every existing view re-theme for free with zero markup changes — see
- * docs/07-admin-ui.md for the rationale.
+ * AdminLTE-style structural overrides on top of vendored Bootstrap 5.3.3's *native*
+ * [data-bs-theme] color mode. Because tokens.css's light/dark values are the same values
+ * Bootstrap already ships for --bs-body-bg / --bs-primary / --bs-success / etc., Bootstrap's
+ * own compiled dark-mode CSS (already in bootstrap.min.css, keyed off [data-bs-theme=dark])
+ * re-themes cards/tables/badges/forms/pagination/dropdowns/alerts correctly with no extra
+ * work here — see docs/07-admin-ui.md. This file only adds the handful of things AdminLTE
+ * itself layers on top of stock Bootstrap dark mode.
  */
 
-:root,
-[data-theme] {
-  --bs-body-bg: var(--surface-canvas);
-  --bs-body-color: var(--text-primary);
-  --bs-emphasis-color: var(--text-primary);
-  --bs-secondary-color: var(--text-secondary);
-  --bs-tertiary-color: var(--text-muted);
-  --bs-tertiary-bg: var(--surface-2);
-  --bs-secondary-bg: var(--surface-2);
-
-  --bs-border-color: var(--border-hairline);
-  --bs-border-color-translucent: var(--border-hairline);
-
-  --bs-link-color: var(--accent);
-  --bs-link-hover-color: var(--accent-hover);
-  --bs-link-color-rgb: 42, 120, 214;
-  --bs-link-hover-color-rgb: 28, 92, 171;
-
-  --bs-primary: var(--accent);
-  --bs-primary-rgb: 42, 120, 214;
-  --bs-primary-text-emphasis: var(--accent);
-  --bs-primary-bg-subtle: var(--surface-2);
-  --bs-primary-border-subtle: var(--border-strong);
-
-  --bs-success: var(--status-good);
-  --bs-success-rgb: 12, 163, 12;
-  --bs-danger: var(--status-critical);
-  --bs-danger-rgb: 208, 59, 59;
-  --bs-warning: var(--status-warning);
-  --bs-warning-rgb: 250, 178, 25;
-
-  --bs-light: var(--surface-2);
-  --bs-light-rgb: 242, 241, 238;
-  --bs-dark: var(--text-primary);
-  --bs-dark-rgb: 11, 11, 11;
-}
-
-[data-theme="dark"] {
-  --bs-link-color-rgb: 57, 135, 229;
-  --bs-link-hover-color-rgb: 85, 152, 231;
-  --bs-primary-rgb: 57, 135, 229;
-}
-
+/* AdminLTE renders the page canvas one step lighter than cards: body uses tertiary-bg while
+   cards use the (darker, in dark mode) body-bg — Bootstrap's own `body` rule uses body-bg
+   directly, so this is the one deliberate departure from "just let Bootstrap handle it". */
 body {
   background-color: var(--surface-canvas);
   color: var(--text-primary);
 }
 
 .card {
-  --bs-card-bg: var(--surface-1);
-  --bs-card-border-color: var(--border-hairline);
-  --bs-card-cap-bg: var(--surface-1);
   box-shadow: var(--shadow-sm);
-}
-
-.table {
-  --bs-table-bg: transparent;
-  --bs-table-color: var(--text-primary);
-  --bs-table-striped-bg: var(--surface-2);
-  --bs-table-hover-bg: var(--surface-2);
-  --bs-table-border-color: var(--border-hairline);
-}
-
-.dropdown-menu,
-.offcanvas,
-.modal-content {
-  background-color: var(--surface-1);
-  border-color: var(--border-hairline);
-  color: var(--text-primary);
-}
-
-.form-control,
-.form-select {
-  background-color: var(--surface-1);
-  border-color: var(--border-strong);
-  color: var(--text-primary);
-}
-
-.form-control:focus,
-.form-select:focus {
-  background-color: var(--surface-1);
-  color: var(--text-primary);
-}
-
-.pagination {
-  --bs-pagination-bg: var(--surface-1);
-  --bs-pagination-color: var(--accent);
-  --bs-pagination-border-color: var(--border-hairline);
-  --bs-pagination-hover-bg: var(--surface-2);
-  --bs-pagination-hover-color: var(--accent-hover);
-  --bs-pagination-active-bg: var(--accent);
-  --bs-pagination-active-border-color: var(--accent);
-  --bs-pagination-disabled-bg: var(--surface-1);
-  --bs-pagination-disabled-color: var(--text-muted);
-}
-
-.breadcrumb {
-  --bs-breadcrumb-item-active-color: var(--text-secondary);
-}
-
-.alert-success {
-  --bs-alert-color: var(--status-good);
-  --bs-alert-bg: var(--surface-2);
-  --bs-alert-border-color: var(--status-good);
-}
-
-.alert-danger {
-  --bs-alert-color: var(--status-critical);
-  --bs-alert-bg: var(--surface-2);
-  --bs-alert-border-color: var(--status-critical);
-}
-
-.text-muted {
-  color: var(--text-muted) !important;
-}
-
-.text-secondary {
-  color: var(--text-secondary) !important;
 }
 
 code {

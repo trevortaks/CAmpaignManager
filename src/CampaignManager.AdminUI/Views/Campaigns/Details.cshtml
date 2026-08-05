@@ -94,26 +94,20 @@
       var segments = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
           visible.Select(s => new { label = s.Label, count = s.Count })));
 
-      // Light/dark pairs from the validated reference palette. Identity is carried by the
-      // legend and the counts table (color swatches below), never by hue alone.
-      var segmentColors = {
-        Queued: { light: '#9a9992', dark: '#b7b6ae' },
-        Processing: { light: '#2a78d6', dark: '#3987e5' },
-        Sent: { light: '#4a3aa7', dark: '#9085e9' },
-        Delivered: { light: '#0ca30c', dark: '#0ca30c' },
-        Read: { light: '#008300', dark: '#0ca30c' },
-        Expired: { light: '#fab219', dark: '#fab219' },
-        Rejected: { light: '#ec835a', dark: '#ec835a' },
-        Failed: { light: '#d03b3b', dark: '#e66767' }
+      // One custom property per segment (tokens.css) — identical values in both theme
+      // blocks where Bootstrap's semantic colors don't shift between light/dark, distinct
+      // where they do (e.g. Queued/Sent lighten for dark-surface contrast). Reading from
+      // CSS keeps a single source of truth instead of duplicating a light/dark hex table
+      // here. Identity is carried by the legend and the counts table (color swatches
+      // below), never by hue alone.
+      var segmentTokens = {
+        Queued: '--status-queued', Processing: '--status-processing', Sent: '--status-sent',
+        Delivered: '--status-delivered', Read: '--status-read', Expired: '--status-expired',
+        Rejected: '--status-rejected', Failed: '--status-failed'
       };
 
-      function isDark() {
-        return document.documentElement.getAttribute('data-theme') === 'dark';
-      }
-
       function colorFor(label) {
-        var pair = segmentColors[label];
-        return isDark() ? pair.dark : pair.light;
+        return getComputedStyle(document.documentElement).getPropertyValue(segmentTokens[label]).trim();
       }
 
       function chartColors() {

@@ -29,12 +29,19 @@
   min-height: 100vh;
 }
 
+/*
+ * The sidebar is always dark (--sidebar-* tokens), independent of the light/dark content
+ * toggle — the classic AdminLTE "dark sidebar, themeable content" convention, confirmed by
+ * inspecting adminlte.io's own dashboard: its sidebar stays #343a40 in both of its light and
+ * dark modes. --sidebar-* tokens are identical in both tokens.css blocks for exactly this
+ * reason (components here don't need a dark-mode variant of their own rules).
+ */
 .sidebar {
   --bs-offcanvas-width: var(--sidebar-width);
   width: var(--sidebar-width);
   flex-shrink: 0;
-  background-color: var(--surface-1);
-  border-right: 1px solid var(--border-hairline);
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
 }
@@ -45,7 +52,7 @@
   justify-content: space-between;
   height: var(--topbar-height);
   padding: 0 var(--space-3);
-  border-bottom: 1px solid var(--border-hairline);
+  border-bottom: 1px solid var(--sidebar-border);
   flex-shrink: 0;
 }
 
@@ -55,12 +62,12 @@
   gap: var(--space-2);
   font-weight: 600;
   font-size: 1rem;
-  color: var(--text-primary);
+  color: var(--sidebar-text);
   text-decoration: none;
 }
 
 .sidebar-brand-link:hover {
-  color: var(--accent);
+  color: #ffffff;
 }
 
 .sidebar-nav {
@@ -78,7 +85,7 @@
   font-weight: 600;
   letter-spacing: .06em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--sidebar-text-muted);
   padding: 0 var(--space-2);
   margin-bottom: var(--space-1);
 }
@@ -89,20 +96,20 @@
   gap: var(--space-2);
   padding: .4375rem var(--space-2);
   border-radius: var(--radius-sm);
-  color: var(--text-secondary);
+  color: var(--sidebar-text-muted);
   text-decoration: none;
   font-size: .9rem;
   line-height: 1.3;
 }
 
 .sidebar-link:hover {
-  background-color: var(--surface-2);
-  color: var(--text-primary);
+  background-color: var(--sidebar-hover-bg);
+  color: var(--sidebar-text);
 }
 
 .sidebar-link.active {
-  background-color: var(--surface-2);
-  color: var(--accent);
+  background-color: var(--sidebar-active-bg);
+  color: #ffffff;
   font-weight: 600;
 }
 
@@ -111,7 +118,7 @@
 }
 
 .sidebar-footer {
-  border-top: 1px solid var(--border-hairline);
+  border-top: 1px solid var(--sidebar-border);
   padding: var(--space-3) var(--space-3);
   flex-shrink: 0;
   display: flex;
@@ -121,7 +128,7 @@
 
 .sidebar-footer-user {
   font-size: .8rem;
-  color: var(--text-secondary);
+  color: var(--sidebar-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -132,28 +139,45 @@
   align-items: center;
   gap: var(--space-2);
   background: none;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--sidebar-border);
   border-radius: var(--radius-sm);
-  color: var(--text-secondary);
+  color: var(--sidebar-text-muted);
   padding: .3rem .6rem;
   font-size: .8rem;
   cursor: pointer;
 }
 
 .theme-toggle:hover {
-  background-color: var(--surface-2);
-  color: var(--text-primary);
+  background-color: var(--sidebar-hover-bg);
+  color: var(--sidebar-text);
+}
+
+/* Sidebar buttons use the fixed --sidebar-* tokens rather than Bootstrap's theme-following
+   --bs-secondary, since (unlike the rest of the app) the sidebar never changes with the
+   light/dark toggle. */
+.sidebar-signout-btn {
+  background: none;
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-sm);
+  color: var(--sidebar-text-muted);
+  padding: .3rem .6rem;
+  font-size: .8rem;
+}
+
+.sidebar-signout-btn:hover {
+  background-color: var(--sidebar-hover-bg);
+  color: var(--sidebar-text);
 }
 
 .theme-toggle .icon-moon {
   display: none;
 }
 
-[data-theme="dark"] .theme-toggle .icon-sun {
+[data-bs-theme="dark"] .theme-toggle .icon-sun {
   display: none;
 }
 
-[data-theme="dark"] .theme-toggle .icon-moon {
+[data-bs-theme="dark"] .theme-toggle .icon-moon {
   display: inline-block;
 }
 
@@ -219,6 +243,97 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
+}
+
+/* AdminLTE "info-box": a solid-color icon square beside a label/value pair. */
+.info-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.info-box-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.info-box-icon .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.info-box-label {
+  color: var(--text-muted);
+  font-size: .8rem;
+}
+
+.info-box-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+/* ---------- Card header / tools (AdminLTE "widget" card pattern) ---------- */
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.card-tools {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.btn-tool {
+  background: none;
+  border: 0;
+  color: var(--text-muted);
+  padding: .25rem;
+  line-height: 0;
+  border-radius: var(--radius-sm);
+}
+
+.btn-tool:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-2);
+}
+
+/*
+ * A collapsed card-tools card (its .collapse child lost .show) must not keep matching
+ * its still-open sibling's height: the .row's flex default (align-items: stretch)
+ * otherwise stretches the now-empty card back up to that height via .h-100, leaving a
+ * blank block instead of shrinking. Overriding height on the card itself (not the
+ * .collapse element, which Bootstrap already handles correctly) fixes this without
+ * touching Bootstrap's own collapse mechanics.
+ */
+.card:has(> .collapse:not(.show)) {
+  height: auto !important;
+}
+
+/*
+ * The rule above shrinks the card itself, but its grid column is still a flex item of
+ * .row (default align-items: stretch) and stays stretched to match taller siblings,
+ * leaving the same blank gap one level up. Opt that column out of the stretch too.
+ */
+.row > *:has(> .card > .collapse:not(.show)) {
+  align-self: flex-start;
 }
 
 /* ---------- Charts ---------- */
