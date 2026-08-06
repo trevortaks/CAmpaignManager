@@ -8,25 +8,29 @@ app projects stay on .NET 8, see [Solution layout](#solution-layout)).
 ## Quick start (local dev, zero real credentials)
 
 ```bash
-# 1. Podman only (no Docker here): point Aspire at it and start its API socket once per session
-export DOTNET_ASPIRE_CONTAINER_RUNTIME=podman
-export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
+# 1. One-time per machine: trust the ASP.NET Core dev cert (the Aspire dashboard needs it for
+#    its internal gRPC channel — on Linux this also needs SSL_CERT_DIR, which the AppHost's
+#    launchSettings.json already sets for you).
+dotnet dev-certs https --trust
+
+# 2. Podman only (no Docker here): start its API socket once per session.
+#    DOTNET_ASPIRE_CONTAINER_RUNTIME=podman is already baked into the AppHost's launchSettings.
 systemctl --user start podman.socket
 
-# 2. Build & test
+# 3. Build & test
 dotnet build
 dotnet test
 
-# 3. Run everything — SQL Server, Redis, Api, Workers, AdminUI — from one AppHost.
+# 4. Run everything — SQL Server, Redis, Api, Workers, AdminUI — from one AppHost.
 #    Prints the Aspire dashboard URL (live logs/traces/metrics for all five resources) and
 #    waits for SQL/Redis before starting the three app hosts. Ctrl+C tears down the containers.
 dotnet run --project src/CampaignManager.AppHost
 
-# 4. End-to-end smoke test (100-recipient + 2,100-recipient bulk-copy campaigns, recurring
+# 5. End-to-end smoke test (100-recipient + 2,100-recipient bulk-copy campaigns, recurring
 #    campaign CRUD, metrics endpoint — all against fake providers)
 ./scripts/smoke.sh
 
-# 5. Optional: Prometheus + Grafana dashboard over the two hosts' /metrics endpoints
+# 6. Optional: Prometheus + Grafana dashboard over the two hosts' /metrics endpoints
 #    (separate from the Aspire dashboard above — closer to the prod observability stack)
 podman-compose --profile observability up -d
 ```
