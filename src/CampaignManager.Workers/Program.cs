@@ -15,6 +15,8 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    builder.AddServiceDefaults();
+
     builder.Host.UseSerilog((context, config) => config
         .ReadFrom.Configuration(context.Configuration)
         .Enrich.FromLogContext()
@@ -67,6 +69,8 @@ try
 
     var app = builder.Build();
 
+    // Not app.MapDefaultEndpoints(): it would map "/health" again (AmbiguousMatchException) —
+    // this host already aggregates its own checks (including SqlServer) at that path below.
     app.MapHealthChecks("/health");
     app.MapPrometheusScrapingEndpoint(); // GET /metrics
     IDashboardAuthorizationFilter dashboardAuth = app.Environment.IsDevelopment()

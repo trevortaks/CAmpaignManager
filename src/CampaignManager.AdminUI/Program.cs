@@ -2,6 +2,8 @@ using CampaignManager.Application;
 using CampaignManager.Application.Abstractions;
 using CampaignManager.Infrastructure;
 using CampaignManager.Infrastructure.Identity;
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 
@@ -11,6 +13,8 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    builder.AddServiceDefaults();
+
     builder.Host.UseSerilog((context, config) => config
         .ReadFrom.Configuration(context.Configuration)
         .Enrich.FromLogContext()
@@ -18,6 +22,20 @@ try
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+
+    // Hangfire client only — the AdminUI issues jobs (recurring-campaign edits, cancellations)
+    // but never runs a server; CampaignManager.Workers is the only host that executes them.
+    builder.Services.AddHangfire(config => config
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseSqlServerStorage(
+            builder.Configuration.GetConnectionString("Default"),
+            new SqlServerStorageOptions
+            {
+                SchemaName = builder.Configuration["Hangfire:SchemaName"] ?? "hangfire",
+                PrepareSchemaIfNecessary = true
+            }));
 
     builder.Services.AddScoped<IUserClaimsPrincipalFactory<AppUser>, AppUserClaimsPrincipalFactory>();
     builder.Services
@@ -61,6 +79,8 @@ try
     });
 
     app.UseAuthorization();
+
+    app.MapDefaultEndpoints();
 
     app.MapControllerRoute(
         name: "default",

@@ -21,6 +21,8 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    builder.AddServiceDefaults();
+
     builder.Host.UseSerilog((context, config) => config
         .ReadFrom.Configuration(context.Configuration)
         .Enrich.FromLogContext()
@@ -174,6 +176,8 @@ try
         });
 
     var app = builder.Build();
+
+    app.MapDefaultEndpoints();
 
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging();
