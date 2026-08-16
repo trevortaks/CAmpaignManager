@@ -42,6 +42,18 @@ Seeded dev logins: API/AdminUI `admin@demo.local` / `Admin!Passw0rd1`; API key
 Redis is optional — if `ConnectionStrings:Redis` is unset, caching and provider rate limiting
 fall back to a single-process in-memory implementation.
 
+## Provider setup
+
+The Admin UI guides administrators through channel selection, a compatible provider, and typed
+provider-specific fields. New real-provider configurations are disabled until their configuration
+is valid and a safe connection test succeeds. SMTP has no non-sending authentication test, so
+enabling it requires an explicit warning confirmation. Stored credentials and webhook secrets are
+never rendered; edits choose **keep**, **replace**, or **clear**.
+
+Implemented providers: fake SMS/Email/WhatsApp, Twilio SMS, Africa's Talking, Clickatell, SMTP,
+SendGrid, Mailgun, Amazon SES, Meta WhatsApp, Twilio WhatsApp, and Infobip. Required settings and
+secrets are listed in [`docs/06-provider-abstraction.md`](docs/06-provider-abstraction.md).
+
 ## Documentation
 
 Architecture, database schema/ERD, API spec, auth flows, background processing with sequence

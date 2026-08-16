@@ -2,6 +2,7 @@ using System.Text.Json;
 using CampaignManager.Application.Abstractions;
 using CampaignManager.Application.Exceptions;
 using CampaignManager.Domain.Entities;
+using CampaignManager.Application.Providers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,14 +19,24 @@ public sealed class ListProvidersHandler : IRequestHandler<ListProvidersQuery, I
         _db = db;
     }
 
-    public async Task<IReadOnlyList<ProviderSummary>> Handle(ListProvidersQuery query, CancellationToken ct) =>
-        await _db.ProviderConfigurations.AsNoTracking()
+    public async Task<IReadOnlyList<ProviderSummary>> Handle(ListProvidersQuery query, CancellationToken ct)
+    {
+        var providers = await _db.ProviderConfigurations.AsNoTracking()
             .OrderBy(p => p.Channel).ThenBy(p => p.Priority)
-            .Select(p => new ProviderSummary(
-                p.Id, p.Channel.ToString(), p.ProviderKey, p.Name, p.Priority, p.IsEnabled,
+            .Select(p => new
+            {
+                p.Id, ChannelName = p.Channel.ToString(), p.ProviderKey, p.Name, p.Priority, p.IsEnabled,
                 p.RateLimitPerMinute, p.MaxRetries, p.RetryDelaySeconds,
-                p.LastTestedAtUtc, p.LastTestSucceeded, p.LastTestError))
+                p.LastTestedAtUtc, p.LastTestSucceeded, p.LastTestError, p.Channel
+            })
             .ToListAsync(ct);
+
+        return providers.Select(p => new ProviderSummary(
+            p.Id, p.ChannelName, p.ProviderKey, p.Name, p.Priority, p.IsEnabled,
+            p.RateLimitPerMinute, p.MaxRetries, p.RetryDelaySeconds,
+            p.LastTestedAtUtc, p.LastTestSucceeded, p.LastTestError,
+            ProviderCatalog.Find(p.Channel, p.ProviderKey)?.SupportsConnectionTest == true)).ToList();
+    }
 }
 
 public sealed record GetProviderQuery(Guid ProviderId) : IRequest<ProviderDetail>;
@@ -58,6 +69,6 @@ public sealed class GetProviderHandler : IRequestHandler<GetProviderQuery, Provi
             config.Id, config.Channel.ToString(), config.ProviderKey, config.Name,
             config.Priority, config.IsEnabled, config.RateLimitPerMinute,
             config.MaxRetries, config.RetryDelaySeconds, settings, credentialKeys,
-            config.WebhookSecret);
+            !string.IsNullOrEmpty(config.WebhookSecret), config.LastTestedAtUtc, config.LastTestSucceeded);
     }
 }

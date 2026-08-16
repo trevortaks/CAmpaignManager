@@ -1,88 +1,187 @@
-@model CampaignManager.Application.Admin.Providers.ProviderDetail?
+@using CampaignManager.Application.Admin.Providers
+@using CampaignManager.Application.Providers
+@model CampaignManager.AdminUI.Models.ProviderEditModel
 @{
-    ViewData["Title"] = Model is null ? "Add provider" : "Edit provider";
-    var settingsRaw = Model is null ? "" : string.Join("\n", Model.Settings.Select(s => $"{s.Key}={s.Value}"));
+    ViewData["Title"] = Model.Id is null ? "Add provider" : "Edit provider";
 }
 <h1 class="h3 mb-3">@ViewData["Title"]</h1>
 
-<form method="post" asp-action="Save" class="col-lg-7">
+<form method="post" asp-action="Save" class="col-xl-8" id="provider-form">
   @Html.AntiForgeryToken()
-  <input type="hidden" name="id" value="@Model?.Id" />
+  <input type="hidden" asp-for="Id" />
+  <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+
+  <div class="alert alert-info">
+    New providers are saved disabled. After saving, test the connection and then enable it from the provider list.
+    Changing connection settings or secrets disables an existing provider and requires a new successful test.
+  </div>
+
   <div class="row g-3">
     <div class="col-md-6">
-      <label class="form-label">Name</label>
-      <input class="form-control" name="name" required value="@Model?.Name" />
+      <label class="form-label" asp-for="Name">Configuration name</label>
+      <input class="form-control" asp-for="Name" required />
+      <span class="text-danger" asp-validation-for="Name"></span>
     </div>
     <div class="col-md-3">
-      <label class="form-label">Channel</label>
-      <select class="form-select" name="channel">
+      <label class="form-label" asp-for="Channel">1. Channel</label>
+      <select class="form-select" asp-for="Channel" id="provider-channel">
         @foreach (var channel in new[] { "Sms", "Email", "WhatsApp" })
         {
-          <option value="@channel" selected="@(channel == Model?.Channel)">@channel</option>
+          <option value="@channel">@channel</option>
         }
       </select>
+      <span class="text-danger" asp-validation-for="Channel"></span>
     </div>
     <div class="col-md-3">
-      <label class="form-label">Provider key</label>
-      <select class="form-select" name="providerKey">
-        @foreach (var key in new[]
+      <label class="form-label" asp-for="ProviderKey">2. Provider</label>
+      <select class="form-select" asp-for="ProviderKey" id="provider-key">
+        @foreach (var provider in Model.Catalog)
         {
-            "fake-sms", "fake-email", "fake-whatsapp",
-            "twilio", "africas-talking", "clickatell",
-            "smtp", "sendgrid", "mailgun", "ses",
-            "meta-whatsapp", "twilio-whatsapp", "infobip"
-        })
-        {
-          <option value="@key" selected="@(key == Model?.ProviderKey)">@key</option>
+          <option value="@provider.Key" data-channel="@provider.Channel">@provider.DisplayName</option>
         }
       </select>
+      <span class="text-danger" asp-validation-for="ProviderKey"></span>
     </div>
-    <div class="col-md-3">
-      <label class="form-label">Priority (lower = preferred)</label>
-      <input class="form-control" type="number" name="priority" value="@(Model?.Priority ?? 10)" />
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Rate limit / minute</label>
-      <input class="form-control" type="number" name="rateLimitPerMinute" value="@Model?.RateLimitPerMinute" placeholder="unlimited" />
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Max retries (0–5)</label>
-      <input class="form-control" type="number" name="maxRetries" value="@(Model?.MaxRetries ?? 0)" min="0" max="5" />
-    </div>
-    <div class="col-md-3">
-      <label class="form-label">Retry delay (s)</label>
-      <input class="form-control" type="number" name="retryDelaySeconds" value="@(Model?.RetryDelaySeconds ?? 2)" min="1" />
-    </div>
-    <div class="col-12">
-      <label class="form-label">Settings (non-secret, one key=value per line)</label>
-      <textarea class="form-control font-monospace" rows="3" name="settingsRaw"
-                placeholder="fromNumber=+15551234567">@settingsRaw</textarea>
-    </div>
-    <div class="col-12">
-      <label class="form-label">
-        Credentials (secret, one key=value per line)
-        @if (Model?.CredentialKeys.Count > 0)
+  </div>
+
+  <h2 class="h5 mt-4">3. Connection details</h2>
+  @foreach (var provider in Model.Catalog)
+  {
+    <fieldset data-provider-fields="@provider.Key" class="provider-fields border rounded p-3 mb-3">
+      <legend class="h6">@provider.DisplayName</legend>
+      <div class="row g-3">
+        @foreach (var field in provider.Settings)
         {
-          <span class="text-muted">— stored keys: @string.Join(", ", Model.CredentialKeys); leave blank to keep</span>
+          var fieldId = $"setting-{provider.Key}-{field.Key}";
+          var value = Model.Settings.GetValueOrDefault(field.Key, field.DefaultValue ?? "");
+          <div class="col-md-6">
+            <label class="form-label" for="@fieldId">@field.Label@(field.Required ? " *" : "")</label>
+            @if (field.Type == ProviderFieldType.Boolean)
+            {
+              <select class="form-select" id="@fieldId" name="Settings[@field.Key]">
+                <option value="true" selected="@(value == "true")">Yes</option>
+                <option value="false" selected="@(value == "false")">No</option>
+              </select>
+            }
+            else if (field.Type == ProviderFieldType.Select && field.Options is not null)
+            {
+              <select class="form-select" id="@fieldId" name="Settings[@field.Key]">
+                @foreach (var option in field.Options) { <option value="@option" selected="@(value == option)">@option</option> }
+              </select>
+            }
+            else
+            {
+              var inputType = field.Type == ProviderFieldType.Url ? "url" : field.Type == ProviderFieldType.Number ? "number" : "text";
+              <input class="form-control" id="@fieldId" name="Settings[@field.Key]" type="@inputType"
+                     value="@value" required="@field.Required" />
+            }
+            @if (field.HelpText is not null) { <div class="form-text">@field.HelpText</div> }
+            @Html.ValidationMessage($"Settings[{field.Key}]", null, new { @class = "text-danger" })
+          </div>
         }
-      </label>
-      <textarea class="form-control font-monospace" rows="3" name="credentialsRaw"
-                placeholder="accountSid=...&#10;authToken=..." autocomplete="off"></textarea>
-    </div>
-    <div class="col-md-6">
-      <label class="form-label">Webhook secret</label>
-      <input class="form-control" name="webhookSecret" value="@Model?.WebhookSecret" autocomplete="off" />
-    </div>
-    <div class="col-md-6 d-flex align-items-end">
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" name="isEnabled" value="true"
-               checked="@(Model?.IsEnabled ?? true)" id="isEnabled" />
-        <label class="form-check-label" for="isEnabled">Enabled</label>
+
+        @if (provider.Secrets.Count > 0)
+        {
+          <div class="col-12">
+            <label class="form-label" for="credentials-action-@provider.Key">Credentials</label>
+            <select class="form-select secret-action" id="credentials-action-@provider.Key" asp-for="CredentialsAction">
+              <option value="Keep">Keep existing</option>
+              <option value="Replace">Replace</option>
+              <option value="Clear">Clear</option>
+            </select>
+            @if (Model.CredentialKeys.Count > 0)
+            { <div class="form-text">Stored credential keys: @string.Join(", ", Model.CredentialKeys). Values are never displayed.</div> }
+          </div>
+          @foreach (var field in provider.Secrets)
+          {
+            var fieldId = $"secret-{provider.Key}-{field.Key}";
+            <div class="col-md-6 replacement-secret">
+              <label class="form-label" for="@fieldId">@field.Label@(field.Required ? " *" : "")</label>
+              <input class="form-control" id="@fieldId" name="Credentials[@field.Key]" type="password"
+                     autocomplete="new-password" />
+              @if (field.HelpText is not null) { <div class="form-text">@field.HelpText</div> }
+              @Html.ValidationMessage($"Credentials[{field.Key}]", null, new { @class = "text-danger" })
+            </div>
+          }
+        }
+
+        @if (provider.WebhookRelevant)
+        {
+          <details class="col-12 border rounded p-3">
+            <summary class="fw-semibold">Advanced: webhook authentication</summary>
+            <div class="row g-3 mt-1">
+              <div class="col-md-6">
+                <label class="form-label" for="webhook-action-@provider.Key">Webhook secret</label>
+                <select class="form-select webhook-action" id="webhook-action-@provider.Key" asp-for="WebhookSecretAction">
+                  <option value="Keep">Keep existing</option>
+                  <option value="Replace">Replace</option>
+                  <option value="Clear">Clear</option>
+                </select>
+                @if (Model.HasWebhookSecret) { <div class="form-text">A webhook secret is stored. Its value is never displayed.</div> }
+              </div>
+              <div class="col-md-6 replacement-webhook">
+                <label class="form-label" asp-for="WebhookSecret">Replacement webhook secret</label>
+                <input class="form-control" id="WebhookSecret" name="WebhookSecret" type="password" autocomplete="new-password" />
+                <span class="text-danger" asp-validation-for="WebhookSecret"></span>
+              </div>
+            </div>
+          </details>
+        }
+      </div>
+    </fieldset>
+  }
+
+  <details class="border rounded p-3 mb-3">
+    <summary class="fw-semibold">Advanced: failover, rate limit, and retries</summary>
+    <p class="text-muted mt-2">Providers are tried by position: 1 is primary, larger numbers are backups. A transient failure exhausts the configured retries before the next provider is tried.</p>
+    <div class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label" asp-for="Priority">Failover position</label>
+        <input class="form-control" asp-for="Priority" type="number" min="1" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" asp-for="RateLimitPerMinute">Rate limit / minute</label>
+        <input class="form-control" asp-for="RateLimitPerMinute" type="number" min="1" placeholder="Unlimited" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" asp-for="MaxRetries">Retries before failover</label>
+        <input class="form-control" asp-for="MaxRetries" type="number" min="0" max="5" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" asp-for="RetryDelaySeconds">Retry delay (seconds)</label>
+        <input class="form-control" asp-for="RetryDelaySeconds" type="number" min="1" max="300" />
       </div>
     </div>
-  </div>
-  <div class="mt-3">
-    <button class="btn btn-primary" type="submit">Save</button>
-    <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
-  </div>
+  </details>
+
+  <button class="btn btn-primary" type="submit">Save provider configuration</button>
+  <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
 </form>
+
+<script>
+(() => {
+  const channel = document.getElementById('provider-channel');
+  const key = document.getElementById('provider-key');
+  const refresh = () => {
+    const available = [...key.options].filter(o => o.dataset.channel === channel.value);
+    [...key.options].forEach(o => o.hidden = !available.includes(o));
+    if (!available.includes(key.selectedOptions[0])) key.value = available[0]?.value ?? '';
+    document.querySelectorAll('[data-provider-fields]').forEach(section => {
+      const active = section.dataset.providerFields === key.value;
+      section.hidden = !active;
+      section.querySelectorAll('input, select, textarea').forEach(input => input.disabled = !active);
+      if (!active) return;
+      const secretAction = section.querySelector('.secret-action');
+      section.querySelectorAll('.replacement-secret input').forEach(input => input.disabled = secretAction?.value !== 'Replace');
+      const webhookAction = section.querySelector('.webhook-action');
+      section.querySelectorAll('.replacement-webhook input').forEach(input => input.disabled = webhookAction?.value !== 'Replace');
+    });
+  };
+  channel.addEventListener('change', refresh);
+  key.addEventListener('change', refresh);
+  document.addEventListener('change', event => {
+    if (event.target.matches('.secret-action, .webhook-action')) refresh();
+  });
+  refresh();
+})();
+</script>

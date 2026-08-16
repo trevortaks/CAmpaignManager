@@ -13,5 +13,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\CampaignManager.Api\CampaignManager.Api.csproj" />
     <ProjectReference Include="..\..\src\CampaignManager.Workers\CampaignManager.Workers.csproj" />
+    <ProjectReference Include="..\..\src\CampaignManager.Sdk\CampaignManager.Sdk.csproj" />
   </ItemGroup>
 </Project>

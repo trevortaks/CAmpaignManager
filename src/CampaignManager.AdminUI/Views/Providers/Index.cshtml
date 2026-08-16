@@ -11,7 +11,7 @@
   <table class="table table-hover align-middle">
     <thead>
       <tr>
-        <th>Name</th><th>Channel</th><th>Key</th><th class="text-end">Priority</th>
+        <th>Name</th><th>Channel</th><th>Key</th><th class="text-end">Position</th>
         <th class="text-end">Rate limit</th><th class="text-end">Retries</th>
         <th>Status</th><th>Last test</th><th class="text-end">Actions</th>
       </tr>
@@ -41,18 +41,23 @@
             { <span class="text-danger" title="@provider.LastTestError">✘ @provider.LastTestedAtUtc?.ToString("MM-dd HH:mm")</span> }
           </td>
           <td class="text-end">
-            <form method="post" asp-action="Test" asp-route-id="@provider.Id" class="d-inline">
-              @Html.AntiForgeryToken()
-              <button class="btn btn-sm btn-outline-primary" type="submit">Test</button>
-            </form>
+            @if (provider.SupportsConnectionTest)
+            {
+              <form method="post" asp-action="Test" asp-route-id="@provider.Id" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button class="btn btn-sm btn-outline-primary" type="submit">Test connection</button>
+              </form>
+            }
             <form method="post" asp-action="SetEnabled" asp-route-id="@provider.Id"
-                  asp-route-enabled="@(!provider.IsEnabled)" class="d-inline">
+                  asp-route-enabled="@(!provider.IsEnabled)" asp-route-confirm-untested="@(!provider.SupportsConnectionTest)"
+                  class="d-inline" onsubmit="return @((!provider.IsEnabled && !provider.SupportsConnectionTest).ToString().ToLowerInvariant()) ? confirm('This provider has no safe connection test. Enable it untested?') : true;">
               @Html.AntiForgeryToken()
               <button class="btn btn-sm btn-outline-secondary" type="submit">
                 @(provider.IsEnabled ? "Disable" : "Enable")
               </button>
             </form>
-            <form method="post" asp-action="Delete" asp-route-id="@provider.Id" class="d-inline">
+            <form method="post" asp-action="Delete" asp-route-id="@provider.Id" class="d-inline"
+                  onsubmit="return confirm('Delete this provider configuration? This cannot be undone.');">
               @Html.AntiForgeryToken()
               <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
             </form>

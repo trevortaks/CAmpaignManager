@@ -31,20 +31,28 @@ retry eligible) · `Rejected(code, msg)` (invalid recipient → terminal, no fai
    failure (including thrown exceptions) logs and falls through to the next provider.
 3. The winning configuration's id is stamped on the message for reporting.
 
-Adding a provider = one class implementing `IChannelProvider` + one DI registration + an admin
-configuration row. Nothing else changes.
+Adding a provider requires one `IChannelProvider`, one DI registration, and one entry in the
+static `ProviderCatalog`. The catalog is the single source for Admin UI choices, compatibility,
+field metadata/defaults, validation, connection-test availability, and webhook relevance. It is
+deliberately not a plugin framework.
 
-## Implemented providers (Phase 1)
+## Implemented providers and configuration
 
-| Key | Channel | Notes |
-|---|---|---|
-| `fake-sms` / `fake-email` / `fake-whatsapp` | all | Dev/demo: logs sends, configurable `failureRatePercent`, emits `fake-…` provider message ids so webhooks are exercisable with zero credentials |
-| `twilio` | SMS | REST `Messages.json`, basic auth (`accountSid`/`authToken`), `fromNumber` setting |
-| `smtp` | Email | `System.Net.Mail`; host/port/ssl settings, optional credentials |
-| `meta-whatsapp` | WhatsApp | Graph API v19 text messages; `accessToken` secret, `phoneNumberId` setting |
-
-Planned (same contract): Africa's Talking, Clickatell, SMPP (SMS); SendGrid, Mailgun, SES
-(email); Twilio WhatsApp, Infobip (WhatsApp).
+| Key | Channel | Required settings | Required secrets | Optional/default fields | Safe test |
+|---|---|---|---|---|---|
+| `fake-sms` | SMS | — | — | `failureRatePercent=0` | yes |
+| `fake-email` | Email | — | — | `failureRatePercent=0` | yes |
+| `fake-whatsapp` | WhatsApp | — | — | `failureRatePercent=0` | yes |
+| `twilio` | SMS | — | `accountSid`, `authToken` | `fromNumber` | yes |
+| `africas-talking` | SMS | `username` | `apiKey` | `shortCode` | yes |
+| `clickatell` | SMS | — | `apiKey` | — | yes |
+| `smtp` | Email | `host` | — | `port=587`, `enableSsl=true`, `username`, `password` | no |
+| `sendgrid` | Email | — | `apiKey` | `fromName` | yes |
+| `mailgun` | Email | `domain` | `apiKey` | — | yes |
+| `ses` | Email | — | `accessKeyId`, `secretAccessKey` | `region=us-east-1` | yes |
+| `meta-whatsapp` | WhatsApp | `phoneNumberId` | `accessToken` | webhook secret | yes |
+| `twilio-whatsapp` | WhatsApp | — | `accountSid`, `authToken` | `fromNumber` | yes |
+| `infobip` | WhatsApp | `baseUrl` | `apiKey` | — | yes |
 
 ## Credentials
 
@@ -52,7 +60,20 @@ Planned (same contract): Africa's Talking, Clickatell, SMPP (SMS); SendGrid, Mai
 Data Protection (purpose-scoped, shared key ring across hosts). Non-secret settings
 (`SettingsJson`) stay queryable plaintext. See 10-security-review for key management.
 
-## Connection testing (Phase 2)
+Admin reads return only stored credential key names and a boolean indicating whether a webhook
+secret exists. Secret values are never returned or pre-filled. Credential and webhook-secret
+edits have explicit keep/replace/clear actions; unchanged required credentials do not need to be
+entered again.
 
-`IChannelProvider` gains `TestAsync(credentials)`; the AdminUI provider form calls it before
-saving. Rate limits and per-provider retry policies also attach to `ProviderConfiguration`.
+## Setup, testing, and activation
+
+New provider configurations are saved disabled. Providers implementing `ITestableProvider` must
+record a successful manual connection test before enablement. A connection-affecting change
+(channel, provider, settings, credentials, or webhook secret) disables the configuration and
+invalidates the previous test. Providers without a safe test—currently SMTP—require an explicit
+enablement confirmation. Manual setup tests update test state but do not emit operational outage
+or authentication notifications; monitoring failures may still notify.
+
+Rate limit, retry count/delay, webhook, and failover position are advanced controls. Lower
+position values are tried first; each provider exhausts its configured transient retries before
+the sender advances to the next enabled provider.

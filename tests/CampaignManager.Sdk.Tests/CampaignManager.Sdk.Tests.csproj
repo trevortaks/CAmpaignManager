@@ -9,10 +9,8 @@
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="NSubstitute" />
     <PackageReference Include="FluentAssertions" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\CampaignManager.Application\CampaignManager.Application.csproj" />
-    <ProjectReference Include="..\..\src\CampaignManager.Infrastructure\CampaignManager.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\CampaignManager.Sdk\CampaignManager.Sdk.csproj" />
   </ItemGroup>
 </Project>
