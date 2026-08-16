@@ -13,5 +13,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CampaignManager.Infrastructure\CampaignManager.Infrastructure.csproj" />
+    <ProjectReference Include="..\CampaignManager.ServiceDefaults\CampaignManager.ServiceDefaults.csproj" />
   </ItemGroup>
 </Project>

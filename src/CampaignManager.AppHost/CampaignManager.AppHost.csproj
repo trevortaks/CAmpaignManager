@@ -1,0 +1,28 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>a8f2e4b1-6c3d-4e9a-9b7f-1d5c8a3e6f42</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <PackageReference Include="Aspire.Hosting.Redis" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CampaignManager.Api\CampaignManager.Api.csproj" />
+    <ProjectReference Include="..\CampaignManager.Workers\CampaignManager.Workers.csproj" />
+    <ProjectReference Include="..\CampaignManager.AdminUI\CampaignManager.AdminUI.csproj" />
+  </ItemGroup>
+
+</Project>

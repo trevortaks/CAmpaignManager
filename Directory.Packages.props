@@ -37,12 +37,18 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.15.3-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.1" />
+    <!-- Aspire (dev orchestration) -->
+    <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.4.6" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.4.6" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.2" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.9.0" />
     <!-- Phase 3: scheduling, caching, resilience, exports, cloud SDKs -->
     <PackageVersion Include="Cronos" Version="0.8.4" />
     <PackageVersion Include="StackExchange.Redis" Version="2.8.16" />
     <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.11" />
     <PackageVersion Include="Polly" Version="8.4.2" />
     <PackageVersion Include="Polly.Extensions" Version="8.4.2" />
+    <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="8.0.11" />
     <PackageVersion Include="ClosedXML" Version="0.104.2" />
     <PackageVersion Include="QuestPDF" Version="2024.10.3" />
     <PackageVersion Include="AWSSDK.SimpleEmail" Version="3.7.402.128" />
