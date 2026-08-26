@@ -17,6 +17,7 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.SqlServer" />
     <PackageReference Include="Aspire.Hosting.Redis" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.DbGate" />
   </ItemGroup>
 
   <ItemGroup>

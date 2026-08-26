@@ -49,10 +49,11 @@
               </form>
             }
             <form method="post" asp-action="SetEnabled" asp-route-id="@provider.Id"
-                  asp-route-enabled="@(!provider.IsEnabled)" asp-route-confirm-untested="@(!provider.SupportsConnectionTest)"
+                  asp-route-enabled="@(!provider.IsEnabled)"
                   class="d-inline" onsubmit="return @((!provider.IsEnabled && !provider.SupportsConnectionTest).ToString().ToLowerInvariant()) ? confirm('This provider has no safe connection test. Enable it untested?') : true;">
               @Html.AntiForgeryToken()
-              <button class="btn btn-sm btn-outline-secondary" type="submit">
+              <button class="btn btn-sm btn-outline-secondary" type="submit"
+                      name="confirmUntested" value="@(!provider.SupportsConnectionTest)">
                 @(provider.IsEnabled ? "Disable" : "Enable")
               </button>
             </form>

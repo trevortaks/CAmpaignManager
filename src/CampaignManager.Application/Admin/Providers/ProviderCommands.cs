@@ -36,6 +36,11 @@ public sealed class SaveProviderHandler : IRequestHandler<SaveProviderCommand, G
     {
         var organizationId = _tenant.OrganizationId
             ?? throw new DomainException("No organization context.");
+        if (!await _db.Organizations.AnyAsync(o => o.Id == organizationId, ct))
+        {
+            throw new DomainException(
+                "Your signed-in organization no longer exists. Restart the API to repair the development seed, then sign out and sign in again.");
+        }
         var input = command.Input;
 
         if (!Enum.TryParse<Channel>(input.Channel, ignoreCase: true, out var channel))

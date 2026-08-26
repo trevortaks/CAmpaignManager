@@ -74,6 +74,18 @@ public static class DbSeeder
             await userManager.AddToRoleAsync(admin, "Admin");
             logger.LogInformation("Seeded admin user {Email}", AdminEmail);
         }
+        else if (admin.OrganizationId != org.Id)
+        {
+            admin.OrganizationId = org.Id;
+            var result = await userManager.UpdateAsync(admin);
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    "Failed to repair demo admin organization: " +
+                    string.Join("; ", result.Errors.Select(e => e.Description)));
+            }
+            logger.LogWarning("Reassigned demo admin to recreated organization {OrgId}", org.Id);
+        }
 
         if (!await db.ProviderConfigurations.IgnoreQueryFilters().AnyAsync(p => p.OrganizationId == org.Id))
         {

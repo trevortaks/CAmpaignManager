@@ -18,6 +18,10 @@ var sql = builder.AddSqlServer("sql")
 var redis = builder.AddRedis("Redis")
     .WithDataVolume();
 
+var dbGate = builder.AddDbGate("dbGate")
+    .WithReference(sql)
+    .WaitFor(sql);
+
 var api = builder.AddProject<Projects.CampaignManager_Api>("api")
     .WithHttpEndpoint(port: 5080, name: "http") // matches scripts/smoke.sh's default API_URL
     .WithReference(sql)

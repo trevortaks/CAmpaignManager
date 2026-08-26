@@ -137,7 +137,22 @@ public sealed class ProviderAdministrationTests
         (await setup.Db.ProviderConfigurations.FindAsync(config.Id))!.LastTestSucceeded.Should().BeFalse();
     }
 
-    private static Setup CreateSetup(SendResult? testResult = null)
+    [Fact]
+    public async Task Save_rejects_a_stale_organization_before_the_database_foreign_key_does()
+    {
+        var setup = CreateSetup(includeOrganization: false);
+
+        var act = () => setup.Save.Handle(new SaveProviderCommand(new SaveProviderInput
+        {
+            Channel = "Sms", ProviderKey = "twilio", Name = "Twilio",
+            CredentialsAction = SecretUpdateAction.Replace,
+            Credentials = new() { ["accountSid"] = "sid", ["authToken"] = "token" }
+        }), CancellationToken.None);
+
+        await act.Should().ThrowAsync<DomainException>().WithMessage("*organization no longer exists*");
+    }
+
+    private static Setup CreateSetup(SendResult? testResult = null, bool includeOrganization = true)
     {
         var organizationId = Guid.NewGuid();
         var tenant = Substitute.For<ICurrentTenant>();
@@ -145,6 +160,14 @@ public sealed class ProviderAdministrationTests
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
         var db = new AppDbContext(options, tenant);
+        if (includeOrganization)
+        {
+            db.Organizations.Add(new Organization
+            {
+                Id = organizationId, Name = "Test", Slug = $"test-{organizationId:N}", CreatedAtUtc = DateTime.UtcNow
+            });
+            db.SaveChanges();
+        }
         var provider = new TestProvider(testResult ?? SendResult.Ok("test-ok"));
         var registry = new ProviderRegistry([provider]);
         var protector = new PlainProtector();
