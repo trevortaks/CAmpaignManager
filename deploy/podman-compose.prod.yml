@@ -1,0 +1,102 @@
+version: "3.8"
+
+# Production compose for a single Linux host. Bring up with:
+#   cd deploy && podman-compose -f podman-compose.prod.yml --env-file .env up -d
+#
+# Requires a `.env` file next to this one (see deploy/.env.example) — never commit real
+# secrets. Build the three app images first (from repo root):
+#   podman build -t campaignmanager-api     --build-arg PROJECT=CampaignManager.Api .
+#   podman build -t campaignmanager-workers --build-arg PROJECT=CampaignManager.Workers .
+#   podman build -t campaignmanager-adminui --build-arg PROJECT=CampaignManager.AdminUI .
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: campaignmanager-sql
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SQL_SA_PASSWORD}"
+      MSSQL_PID: "Developer"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    # No published port: only the app containers on this compose network reach it.
+
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: campaignmanager-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  api:
+    image: campaignmanager-api
+    container_name: campaignmanager-api
+    restart: unless-stopped
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=CampaignManager;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      ConnectionStrings__Redis: "redis:6379"
+      Jwt__SigningKey: "${JWT_SIGNING_KEY}"
+      DataProtection__KeysPath: "/keys"
+      Database__MigrateOnStartup: "true"
+    volumes:
+      - dataprotection-keys:/keys
+    ports:
+      - "127.0.0.1:5080:8080"   # bound to loopback; nginx proxies to it
+
+  workers:
+    image: campaignmanager-workers
+    container_name: campaignmanager-workers
+    restart: unless-stopped
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=CampaignManager;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      ConnectionStrings__Redis: "redis:6379"
+      DataProtection__KeysPath: "/keys"
+    volumes:
+      - dataprotection-keys:/keys
+    ports:
+      - "127.0.0.1:5090:8080"
+
+  adminui:
+    image: campaignmanager-adminui
+    container_name: campaignmanager-adminui
+    restart: unless-stopped
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=CampaignManager;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      ConnectionStrings__Redis: "redis:6379"
+      DataProtection__KeysPath: "/keys"
+    volumes:
+      - dataprotection-keys:/keys
+    ports:
+      - "127.0.0.1:5100:8080"
+
+volumes:
+  mssql-data:
+  redis-data:
+  dataprotection-keys:

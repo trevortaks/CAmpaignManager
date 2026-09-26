@@ -76,6 +76,7 @@ public static class DependencyInjection
         services.AddSingleton<IChannelProvider, Providers.Ses.SesEmailProvider>();
         services.AddSingleton<IChannelProvider, Providers.AfricasTalking.AfricasTalkingSmsProvider>();
         services.AddSingleton<IChannelProvider, Providers.Clickatell.ClickatellSmsProvider>();
+        services.AddSingleton<IChannelProvider, Providers.Gikko.GikkoSmsProvider>();
         services.AddSingleton<IChannelProvider, Providers.Twilio.TwilioWhatsAppProvider>();
         services.AddSingleton<IChannelProvider, Providers.Infobip.InfobipWhatsAppProvider>();
         services.AddSingleton<IProviderRegistry, ProviderRegistry>();

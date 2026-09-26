@@ -64,7 +64,7 @@ is valid and a safe connection test succeeds. SMTP has no non-sending authentica
 enabling it requires an explicit warning confirmation. Stored credentials and webhook secrets are
 never rendered; edits choose **keep**, **replace**, or **clear**.
 
-Implemented providers: fake SMS/Email/WhatsApp, Twilio SMS, Africa's Talking, Clickatell, SMTP,
+Implemented providers: fake SMS/Email/WhatsApp, Twilio SMS, Africa's Talking, Clickatell, Gikko SMS, SMTP,
 SendGrid, Mailgun, Amazon SES, Meta WhatsApp, Twilio WhatsApp, and Infobip. Required settings and
 secrets are listed in [`docs/06-provider-abstraction.md`](docs/06-provider-abstraction.md).
 

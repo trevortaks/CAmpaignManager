@@ -46,6 +46,7 @@ deliberately not a plugin framework.
 | `twilio` | SMS | — | `accountSid`, `authToken` | `fromNumber` | yes |
 | `africas-talking` | SMS | `username` | `apiKey` | `shortCode` | yes |
 | `clickatell` | SMS | — | `apiKey` | — | yes |
+| `gikko` | SMS | `baseUrl` | `apiKey` | `fromNumber` | yes |
 | `smtp` | Email | `host` | — | `port=587`, `enableSsl=true`, `username`, `password` | no |
 | `sendgrid` | Email | — | `apiKey` | `fromName` | yes |
 | `mailgun` | Email | `domain` | `apiKey` | — | yes |

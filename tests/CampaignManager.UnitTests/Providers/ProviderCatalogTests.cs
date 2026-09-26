@@ -14,7 +14,7 @@ public sealed class ProviderCatalogTests
     {
         var expected = new[]
         {
-            "fake-sms", "fake-email", "fake-whatsapp", "twilio", "africas-talking", "clickatell",
+            "fake-sms", "fake-email", "fake-whatsapp", "twilio", "africas-talking", "clickatell", "gikko",
             "smtp", "sendgrid", "mailgun", "ses", "meta-whatsapp", "twilio-whatsapp", "infobip"
         };
 
