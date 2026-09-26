@@ -4,10 +4,11 @@ version: "3.8"
 #   cd deploy && podman-compose -f podman-compose.prod.yml --env-file .env up -d
 #
 # Requires a `.env` file next to this one (see deploy/.env.example) — never commit real
-# secrets. Build the three app images first (from repo root):
-#   podman build -t campaignmanager-api     --build-arg PROJECT=CampaignManager.Api .
-#   podman build -t campaignmanager-workers --build-arg PROJECT=CampaignManager.Workers .
-#   podman build -t campaignmanager-adminui --build-arg PROJECT=CampaignManager.AdminUI .
+# secrets. Build the three app images first (from repo root). The localhost/ prefix keeps
+# Podman from treating the bare name as an unqualified search against a remote registry:
+#   podman build -t localhost/campaignmanager-api     --build-arg PROJECT=CampaignManager.Api .
+#   podman build -t localhost/campaignmanager-workers --build-arg PROJECT=CampaignManager.Workers .
+#   podman build -t localhost/campaignmanager-adminui --build-arg PROJECT=CampaignManager.AdminUI .
 
 services:
   sqlserver:
@@ -41,7 +42,7 @@ services:
       retries: 6
 
   api:
-    image: campaignmanager-api
+    image: localhost/campaignmanager-api
     container_name: campaignmanager-api
     restart: unless-stopped
     depends_on:
@@ -61,7 +62,7 @@ services:
       - "127.0.0.1:5080:8080"   # bound to loopback; nginx proxies to it
 
   workers:
-    image: campaignmanager-workers
+    image: localhost/campaignmanager-workers
     container_name: campaignmanager-workers
     restart: unless-stopped
     depends_on:
@@ -79,7 +80,7 @@ services:
       - "127.0.0.1:5090:8080"
 
   adminui:
-    image: campaignmanager-adminui
+    image: localhost/campaignmanager-adminui
     container_name: campaignmanager-adminui
     restart: unless-stopped
     depends_on:

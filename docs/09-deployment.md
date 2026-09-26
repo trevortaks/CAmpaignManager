@@ -31,9 +31,9 @@ Local dev uses `podman-compose.yml` (SQL Server 2022, named volume, healthcheck)
 build from `Dockerfile` (multi-stage, `PROJECT` build-arg selects Api/Workers/AdminUI):
 
 ```bash
-podman build -t campaignmanager-api     --build-arg PROJECT=CampaignManager.Api .
-podman build -t campaignmanager-workers --build-arg PROJECT=CampaignManager.Workers .
-podman build -t campaignmanager-adminui --build-arg PROJECT=CampaignManager.AdminUI .
+podman build -t localhost/campaignmanager-api     --build-arg PROJECT=CampaignManager.Api .
+podman build -t localhost/campaignmanager-workers --build-arg PROJECT=CampaignManager.Workers .
+podman build -t localhost/campaignmanager-adminui --build-arg PROJECT=CampaignManager.AdminUI .
 ```
 
 Connection strings, `Jwt__SigningKey` and `DataProtection__KeysPath` are injected as
