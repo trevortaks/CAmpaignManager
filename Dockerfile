@@ -1,8 +1,8 @@
 # Multi-stage build; PROJECT selects the host to publish:
-#   podman build -t campaignmanager-api --build-arg PROJECT=CampaignManager.Api .
+#   podman build -t localhost/campaignmanager-api --build-arg PROJECT=CampaignManager.Api .
 ARG PROJECT=CampaignManager.Api
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG PROJECT
 WORKDIR /src
 COPY Directory.Build.props Directory.Packages.props global.json ./
